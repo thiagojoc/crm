@@ -49,6 +49,8 @@
 
   header.top { display: flex; align-items: center; gap: 10px; padding: 14px 24px; background: #0a0b0d; border-bottom: 1px solid rgba(217,169,77,0.14); flex-wrap: wrap; }
   header.top span.brand { font-weight: 700; letter-spacing: .04em; font-size: 16.5px; }
+  .brand-logo-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  #brand-custom-logo { max-height: 28px; max-width: 160px; object-fit: contain; }
   .workspace-switcher { display: flex; align-items: center; gap: 8px; margin-right: 16px; }
   #workspace-select { background: #1c1f24; border: 1px solid rgba(217,169,77,0.25); border-radius: 7px; color: #f5f3ee; padding: 7px 10px; font-size: 15px; font-family: inherit; max-width: 220px; }
   .header-user { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #c3c5cb; }
@@ -470,17 +472,24 @@
 <div id="app-root" style="display:none;">
 
 <header class="top">
-  <svg viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="22" height="17">
-    <rect x="0" y="0" width="36" height="8" rx="2.5" fill="#d9a94d"></rect>
-    <rect x="0" y="10" width="24" height="8" rx="2.5" fill="#d9a94d"></rect>
-    <rect x="0" y="20" width="13" height="8" rx="2.5" fill="#d9a94d"></rect>
-  </svg>
-  <span class="brand">FlowSales CRM</span>
+  <div class="brand-logo-wrap" id="brand-logo-wrap">
+    <svg id="brand-default-logo" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="22" height="17">
+      <rect x="0" y="0" width="36" height="8" rx="2.5" fill="#d9a94d"></rect>
+      <rect x="0" y="10" width="24" height="8" rx="2.5" fill="#d9a94d"></rect>
+      <rect x="0" y="20" width="13" height="8" rx="2.5" fill="#d9a94d"></rect>
+    </svg>
+    <img id="brand-custom-logo" alt="Logo da conta" style="display:none;">
+    <span class="brand" id="brand-text">FlowSales CRM</span>
+  </div>
   <div class="spacer"></div>
-  <div class="workspace-switcher" id="workspace-switcher" style="display:none;">
+  <div class="workspace-switcher filter-wrap" id="workspace-switcher" style="display:none;">
     <select id="workspace-select" title="Trocar de conta"></select>
-    <button class="icon-btn" id="new-workspace-btn" title="Criar nova conta" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-    <button class="icon-btn" id="participants-btn" title="Gerenciar participantes desta conta" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+    <button class="icon-btn" id="workspace-menu-btn" title="Opções da conta" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+    <div class="filter-panel menu-panel" id="workspace-menu-panel">
+      <button class="menu-item" id="new-workspace-btn">Criar nova conta...</button>
+      <button class="menu-item" id="workspace-logo-btn">Alterar logo da conta...</button>
+      <button class="menu-item" id="participants-btn">Gerenciar participantes...</button>
+    </div>
   </div>
   <button class="icon-btn" id="scheduled-messages-btn" title="Mensagens agendadas no WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
   <div class="header-user">
@@ -1624,7 +1633,12 @@ const DB = {
   // wa-crm-bridge, que roda fora daqui, ver README dela). O CRM so grava a
   // lista; quem manda de verdade e o script rodando com o numero conectado.
   async getScheduledMessages(){ await _fbInit(); return _fbData.scheduledMessages || []; },
-  async saveScheduledMessages(list){ await _fbInit(); _fbData.scheduledMessages = list; await setDoc(CRM_DOC, { scheduledMessages: list }, { merge: true }); }
+  async saveScheduledMessages(list){ await _fbInit(); _fbData.scheduledMessages = list; await setDoc(CRM_DOC, { scheduledMessages: list }, { merge: true }); },
+  // logo dessa conta (workspace), mostrado no canto superior esquerdo no
+  // lugar do losango padrao. Guardado como data URL (ja reduzido no cliente
+  // antes de subir, ver pickWorkspaceLogo), igual foto de perfil.
+  async getLogo(){ await _fbInit(); return _fbData.logo || ''; },
+  async saveLogo(dataUrl){ await _fbInit(); _fbData.logo = dataUrl; await setDoc(CRM_DOC, { logo: dataUrl }, { merge: true }); }
 };
 
 let contacts = [], pipelines = [], opportunities = [], activities = [], calls = [];
@@ -2251,6 +2265,10 @@ function bindStaticEvents(){
     if(mPanel.classList.contains('show') && !mPanel.contains(e.target) && e.target.id !== 'more-actions-btn'){
       mPanel.classList.remove('show');
     }
+    const wPanel = document.getElementById('workspace-menu-panel');
+    if(wPanel.classList.contains('show') && !wPanel.contains(e.target) && e.target.id !== 'workspace-menu-btn'){
+      wPanel.classList.remove('show');
+    }
   });
   document.querySelectorAll('.outcome-check').forEach(chk => chk.addEventListener('change', () => {
     if(chk.checked) outcomeFilters.add(chk.value); else outcomeFilters.delete(chk.value);
@@ -2341,9 +2359,17 @@ function bindStaticEvents(){
   document.getElementById('pf-new-pass2-eye').addEventListener('click', function(){ togglePassVisibility('pf-new-pass2', this); });
 
   document.getElementById('workspace-select').addEventListener('change', (e) => switchWorkspace(e.target.value));
+  document.getElementById('workspace-menu-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('workspace-menu-panel').classList.toggle('show');
+  });
+  document.getElementById('workspace-menu-panel').addEventListener('click', (e) => {
+    if(e.target.closest('.menu-item')) document.getElementById('workspace-menu-panel').classList.remove('show');
+  });
   document.getElementById('new-workspace-btn').addEventListener('click', openNewWorkspaceModal);
   document.getElementById('nw-cancel-btn').addEventListener('click', () => document.getElementById('new-workspace-modal-bg').classList.remove('show'));
   document.getElementById('nw-create-btn').addEventListener('click', createWorkspace);
+  document.getElementById('workspace-logo-btn').addEventListener('click', pickWorkspaceLogo);
   document.getElementById('participants-btn').addEventListener('click', openParticipantsModal);
   document.getElementById('pt-close-btn').addEventListener('click', () => document.getElementById('participants-modal-bg').classList.remove('show'));
   document.getElementById('pt-invite-btn').addEventListener('click', inviteParticipant);
@@ -2509,10 +2535,55 @@ function updateWorkspaceSwitcher(){
   const sel = document.getElementById('workspace-select');
   sel.innerHTML = keys.map(k => '<option value="'+escapeHtml(k)+'"'+(k===currentUser.activeWorkspace?' selected':'')+'>'+escapeHtml(workspaces[k].name||k)+'</option>').join('');
   const isAdmin = _myRoleInActiveWorkspace() === 'admin';
-  // criar conta nova fica disponivel pra quem ja e admin de pelo menos uma
-  // (so quem tem uma conta pra administrar sabe o que esta fazendo aqui).
-  document.getElementById('new-workspace-btn').style.display = isAdmin ? 'flex' : 'none';
-  document.getElementById('participants-btn').style.display = isAdmin ? 'flex' : 'none';
+  // as opcoes de gerenciar a conta (criar conta nova, trocar logo, convidar
+  // participantes) ficam atras de um so botao, disponivel pra quem e admin
+  // da conta ativa (quem so tem acesso limitado nao gerencia a conta).
+  document.getElementById('workspace-menu-btn').style.display = isAdmin ? 'flex' : 'none';
+  if(!isAdmin) document.getElementById('workspace-menu-panel').classList.remove('show');
+}
+// logo e nome mostrados no canto superior esquerdo: refletem a conta ativa,
+// pra ficar claro visualmente em qual conta voce esta (principalmente com
+// mais de uma conta e logos diferentes).
+async function updateBrandLogo(){
+  let logo = '';
+  try { logo = await DB.getLogo(); } catch(e){}
+  document.getElementById('brand-default-logo').style.display = logo ? 'none' : 'block';
+  const img = document.getElementById('brand-custom-logo');
+  if(logo){ img.src = logo; img.style.display = 'block'; } else { img.style.display = 'none'; }
+  const ws = currentUser.workspaces && currentUser.workspaces[currentUser.activeWorkspace];
+  document.getElementById('brand-text').textContent = (ws && ws.name) ? ws.name : 'FlowSales CRM';
+}
+function pickWorkspaceLogo(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = async () => {
+        // reduz pro tamanho de exibicao (cabe no cabecalho) antes de subir,
+        // pra nao arriscar estourar o limite de 1MiB do documento no
+        // Firestore com uma imagem em resolucao alta.
+        const maxSide = 200;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width*scale));
+        canvas.height = Math.max(1, Math.round(img.height*scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        try {
+          await DB.saveLogo(canvas.toDataURL('image/png'));
+          await updateBrandLogo();
+        } catch(err){
+          console.error('[CRM] falha ao salvar logo:', err);
+          alert('Não deu pra salvar a logo agora. Tente de novo em instantes.');
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
 }
 async function switchWorkspace(workspaceId){
   if(!currentUser.workspaces || !currentUser.workspaces[workspaceId] || workspaceId === currentUser.activeWorkspace) return;
@@ -2537,6 +2608,7 @@ async function switchWorkspace(workspaceId){
   render();
   checkScheduleReminders();
   updateWorkspaceSwitcher();
+  updateBrandLogo();
 }
 function openNewWorkspaceModal(){
   document.getElementById('nw-name').value = '';
@@ -2564,7 +2636,11 @@ async function createWorkspace(){
     await switchWorkspace(slug);
   } catch(err){
     console.error('[CRM] falha ao criar conta:', err);
-    errEl.textContent = 'Não deu pra criar a conta agora. Tente de novo em instantes.';
+    if(err && err.code === 'permission-denied'){
+      errEl.innerHTML = 'O Firestore recusou a escrita (permission-denied). Provavelmente as regras novas (firestore.rules) ainda não foram publicadas no console do Firebase. Publique as regras do projeto e tente de novo.';
+    } else {
+      errEl.textContent = 'Não deu pra criar a conta agora. Tente de novo em instantes. Detalhe: ' + ((err && (err.code || err.message)) || 'desconhecido');
+    }
   }
 }
 async function openParticipantsModal(){
@@ -2625,7 +2701,15 @@ async function inviteParticipant(){
   const invited = await DB.getInvitedEmails();
   if(invited[email]){ errEl.textContent = 'Esse e-mail já é participante dessa conta.'; return; }
   const updated = Object.assign({}, invited, { [email]: role });
-  await DB.saveInvitedEmails(updated);
+  try {
+    await DB.saveInvitedEmails(updated);
+  } catch(err){
+    console.error('[CRM] falha ao convidar participante:', err);
+    errEl.textContent = err && err.code === 'permission-denied'
+      ? 'O Firestore recusou a escrita. As regras novas (firestore.rules) precisam estar publicadas no console do Firebase.'
+      : 'Não deu pra convidar agora. Tente de novo em instantes.';
+    return;
+  }
   const workspaceName = (currentUser.workspaces[currentUser.activeWorkspace]||{}).name || currentUser.activeWorkspace;
   await _syncParticipantRoleIndex(email, workspaceName, role);
   document.getElementById('pt-new-email').value = '';
@@ -2634,7 +2718,14 @@ async function inviteParticipant(){
 async function changeParticipantRole(email, role){
   const invited = await DB.getInvitedEmails();
   const updated = Object.assign({}, invited, { [email]: role });
-  await DB.saveInvitedEmails(updated);
+  try {
+    await DB.saveInvitedEmails(updated);
+  } catch(err){
+    console.error('[CRM] falha ao mudar papel do participante:', err);
+    alert('Não deu pra salvar agora. Tente de novo em instantes.');
+    await renderParticipantsList();
+    return;
+  }
   const workspaceName = (currentUser.workspaces[currentUser.activeWorkspace]||{}).name || currentUser.activeWorkspace;
   await _syncParticipantRoleIndex(email, workspaceName, role);
 }
@@ -2643,7 +2734,13 @@ async function removeParticipant(email){
   const invited = await DB.getInvitedEmails();
   const updated = Object.assign({}, invited);
   delete updated[email];
-  await DB.saveInvitedEmails(updated);
+  try {
+    await DB.saveInvitedEmails(updated);
+  } catch(err){
+    console.error('[CRM] falha ao remover participante:', err);
+    alert('Não deu pra remover agora. Tente de novo em instantes.');
+    return;
+  }
   await _syncParticipantRoleIndex(email, '', null);
   await renderParticipantsList();
 }
@@ -3910,6 +4007,7 @@ function showApp(user){
   document.getElementById('app-root').style.display = 'block';
   updateHeaderUser();
   updateWorkspaceSwitcher();
+  updateBrandLogo();
   boot();
 }
 
