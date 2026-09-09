@@ -52,30 +52,41 @@
   .brand-logo-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
   #brand-custom-logo { max-height: 28px; max-width: 160px; object-fit: contain; }
 
-  /* automacoes: lista de fluxos (tema claro, igual ao resto do CRM) */
-  .flow-card { display: flex; justify-content: space-between; align-items: center; gap: 14px; background: #F7F6F2; border: 1px solid rgba(217,169,77,0.22); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
-  .flow-card b { font-size: 16px; color: #1E2024; }
-  .flow-card-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .flow-toggle { display: flex; align-items: center; gap: 6px; font-size: 14.5px; color: #5B5D63; cursor: pointer; }
+  /* automacoes: lista de fluxos (tema claro, igual ao resto do CRM, mesma
+     linguagem visual de card/pill usada no resto do CRM: card branco, borda
+     dourada suave, sombra leve, hierarquia clara nome > gatilho > acoes). */
+  .flow-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #FFFFFF; border: 1px solid rgba(217,169,77,0.28); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(30,32,36,0.06); }
+  .flow-card-name { font-size: 17px; font-weight: 700; color: #1E2024; }
+  .flow-card-trigger { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #7A7C82; margin-top: 5px; }
+  .flow-card-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .flow-status-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 4px 10px; border-radius: 10px; background: rgba(63,174,129,0.12); color: #2E8763; }
+  .flow-status-pill.paused { background: rgba(122,124,130,0.12); color: #7A7C82; }
+  .flow-status-pill input { margin: 0; }
 
-  /* tela cheia de montagem do fluxo (nao e um popup: ocupa o lugar da lista) */
-  .flow-editor-header { display: flex; align-items: center; gap: 14px; padding: 16px 24px; border-bottom: 1px solid rgba(217,169,77,0.22); flex-wrap: wrap; }
-  .flow-editor-header .field { margin-bottom: 0; }
-  .flow-editor-toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 24px; flex-wrap: wrap; border-bottom: 1px solid rgba(217,169,77,0.14); }
-  .flow-canvas-wrap { position: relative; overflow: auto; background: #FAFAF7; background-image: radial-gradient(rgba(217,169,77,0.28) 1px, transparent 1px); background-size: 20px 20px; height: calc(100vh - 260px); min-height: 420px; }
-  .flow-canvas { position: relative; width: 1800px; height: 1200px; }
-  #flow-canvas-svg { position: absolute; top: 0; left: 0; width: 1800px; height: 1200px; pointer-events: none; }
-  .flow-node { position: absolute; width: 240px; background: #FFFFFF; border: 1px solid rgba(217,169,77,0.35); border-radius: 10px; padding: 10px; box-shadow: 0 6px 18px -8px rgba(30,32,36,0.18); }
-  .flow-node-head { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #B8862F; cursor: grab; touch-action: none; user-select: none; margin-bottom: 8px; }
+  /* tela cheia de montagem do fluxo (pagina propria, nao um popup) */
+  .flow-editor-topbar { display: flex; align-items: center; gap: 16px; padding: 18px 28px; border-bottom: 1px solid rgba(217,169,77,0.22); }
+  #flow-name { font-size: 20px; font-weight: 700; font-family: var(--font-sans); letter-spacing: -0.01em; border: none; background: none; padding: 6px 0; color: #1E2024; flex: 1; min-width: 160px; }
+  #flow-name:focus { outline: none; border-bottom: 2px solid #d9a94d; }
+  #flow-name::placeholder { color: #9A9CA3; font-weight: 600; }
+  .flow-editor-trigger-panel { display: flex; align-items: flex-end; gap: 16px; padding: 18px 28px; background: #F7F6F2; border-bottom: 1px solid rgba(217,169,77,0.18); flex-wrap: wrap; }
+  .flow-editor-trigger-panel .field { margin-bottom: 0; }
+  .flow-editor-toolbar { display: flex; align-items: center; gap: 10px; padding: 16px 28px; flex-wrap: wrap; border-bottom: 1px solid rgba(217,169,77,0.14); }
+  .flow-editor-toolbar .hint { flex-basis: 100%; margin-top: 4px; }
+  .flow-canvas-wrap { position: relative; overflow: auto; background: #FCFBF8; background-image: radial-gradient(rgba(217,169,77,0.3) 1.5px, transparent 1.5px); background-size: 22px 22px; height: calc(100vh - 300px); min-height: 420px; }
+  .flow-canvas { position: relative; width: 1900px; height: 1300px; }
+  #flow-canvas-svg { position: absolute; top: 0; left: 0; width: 1900px; height: 1300px; pointer-events: none; }
+  .flow-node { position: absolute; width: 260px; background: #FFFFFF; border: 1px solid rgba(217,169,77,0.32); border-radius: 12px; padding: 16px; box-shadow: 0 4px 14px -6px rgba(30,32,36,0.16); }
+  .flow-node-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #B8862F; cursor: grab; touch-action: none; user-select: none; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(217,169,77,0.16); }
   .flow-node-head span { flex: 1; }
-  .flow-node-copy, .flow-node-del { background: none; border: none; color: #9A9CA3; font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 5px; }
-  .flow-node-copy:hover { color: #B8862F; }
-  .flow-node-del:hover { color: #d9614a; }
-  .flow-node-text { width: 100%; min-height: 64px; background: #FAFAF7; border: 1px solid rgba(217,169,77,0.25); border-radius: 6px; color: #1E2024; padding: 7px 8px; font-size: 14.5px; font-family: inherit; resize: vertical; }
-  .flow-node-next-label { display: block; font-size: 13px; color: #7A7C82; margin: 8px 0 3px; }
-  .flow-node-next, .flow-node-wait-amount, .flow-node-wait-unit, .flow-node-wait-mode { width: 100%; background: #FAFAF7; border: 1px solid rgba(217,169,77,0.25); border-radius: 6px; color: #1E2024; padding: 6px 7px; font-size: 14px; font-family: inherit; }
-  .flow-node-wait-row { display: flex; gap: 6px; }
-  .flow-node-wait-row .flow-node-wait-amount { width: 70px; flex-shrink: 0; }
+  .flow-node-copy, .flow-node-del { background: none; border: none; color: #9A9CA3; font-size: 16px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  .flow-node-copy:hover { color: #B8862F; background: rgba(217,169,77,0.1); }
+  .flow-node-del:hover { color: #d9614a; background: rgba(217,97,74,0.1); }
+  .flow-node-text { width: 100%; min-height: 72px; background: #FAFAF7; border: 1px solid rgba(217,169,77,0.25); border-radius: 7px; color: #1E2024; padding: 9px 10px; font-size: 15px; font-family: inherit; line-height: 1.45; resize: vertical; }
+  .flow-node-next-label { display: block; font-size: 14px; color: #7A7C82; margin: 12px 0 5px; }
+  .flow-node-next, .flow-node-wait-amount, .flow-node-wait-unit, .flow-node-wait-mode { width: 100%; background: #FAFAF7; border: 1px solid rgba(217,169,77,0.25); border-radius: 7px; color: #1E2024; padding: 8px 9px; font-size: 14.5px; font-family: inherit; }
+  .flow-node-wait-row { display: flex; gap: 8px; }
+  .flow-node-wait-row .flow-node-wait-amount { width: 74px; flex-shrink: 0; }
+  .flow-node .hint { margin-top: 8px; }
   .workspace-switcher { display: flex; align-items: center; gap: 8px; margin-right: 16px; }
   #workspace-select { background: #1c1f24; border: 1px solid rgba(217,169,77,0.25); border-radius: 7px; color: #f5f3ee; padding: 7px 10px; font-size: 15px; font-family: inherit; max-width: 220px; }
   .header-user { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #c3c5cb; }
@@ -889,31 +900,37 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
 </div>
 
 <div id="view-flow-editor" style="display:none;">
-  <div class="flow-editor-header">
+  <div class="flow-editor-topbar">
     <button class="btn-secondary btn-sm" id="flow-back-btn">&larr; Voltar</button>
-    <div class="field" style="flex:2;min-width:220px;"><input type="text" id="flow-name" placeholder="Nome do fluxo, ex.: Boas-vindas leilão de imóveis"></div>
-    <div class="field" style="min-width:220px;"><select id="flow-trigger-type">
-      <option value="message">Gatilho: mensagem recebida no WhatsApp</option>
-      <option value="stage">Gatilho: lead mudou de etapa</option>
-    </select></div>
-    <div id="flow-trigger-message-fields" style="flex:2;min-width:220px;">
-      <input type="text" id="flow-trigger-keywords" placeholder="Palavras-chave, separadas por vírgula (vazio = qualquer lead novo)">
-    </div>
-    <div class="field-row" id="flow-trigger-stage-fields" style="display:none;flex:2;min-width:280px;margin-bottom:0;">
-      <select id="flow-trigger-pipeline"></select>
-      <select id="flow-trigger-stage"></select>
-    </div>
-    <div class="spacer"></div>
+    <input type="text" id="flow-name" placeholder="Nome do fluxo, ex.: Boas-vindas leilão de imóveis">
     <button class="btn-secondary" id="flow-delete-btn" style="color:#d9614a;">Excluir fluxo</button>
     <button class="btn-primary" id="flow-save-btn">Salvar fluxo</button>
+  </div>
+  <div class="flow-editor-trigger-panel">
+    <div class="field" style="min-width:240px;"><label>Gatilho</label><select id="flow-trigger-type">
+      <option value="message">Mensagem recebida no WhatsApp</option>
+      <option value="stage">Lead mudou de etapa</option>
+    </select></div>
+    <div class="field" id="flow-trigger-message-fields" style="flex:2;min-width:260px;">
+      <label>Palavras-chave (separadas por vírgula)</label>
+      <input type="text" id="flow-trigger-keywords" placeholder="Vazio = qualquer lead novo">
+    </div>
+    <div class="field" id="flow-trigger-stage-pipeline-field" style="display:none;min-width:200px;">
+      <label>Pipeline</label>
+      <select id="flow-trigger-pipeline"></select>
+    </div>
+    <div class="field" id="flow-trigger-stage-field" style="display:none;min-width:200px;">
+      <label>Etapa</label>
+      <select id="flow-trigger-stage"></select>
+    </div>
   </div>
   <div class="flow-editor-toolbar">
     <button type="button" class="btn-secondary btn-sm" id="flow-add-send-btn">+ Enviar mensagem</button>
     <button type="button" class="btn-secondary btn-sm" id="flow-add-wait-btn">+ Esperar</button>
     <button type="button" class="btn-secondary btn-sm" id="flow-add-if-btn">+ Se / Então</button>
-    <div class="hint" style="margin-left:8px;">Variáveis: {{nome}}, {{data}}, {{hora}}, {{link}} (vêm do agendamento do lead). Cada cartão novo já liga sozinho no anterior; use "depois vai para" pra mudar. O ícone de copiar duplica o cartão.</div>
+    <div class="hint">Variáveis disponíveis: {{nome}}, {{data}}, {{hora}}, {{link}} (vêm do agendamento do lead). Cada cartão novo já liga sozinho no anterior; use "depois vai para" pra mudar. O ícone de copiar duplica o cartão.</div>
   </div>
-  <div class="login-err" id="flow-err" style="padding:0 24px;"></div>
+  <div class="login-err" id="flow-err" style="padding:0 28px;"></div>
   <div class="flow-canvas-wrap" id="flow-canvas-wrap">
     <div class="flow-canvas" id="flow-canvas">
       <svg id="flow-canvas-svg"></svg>
@@ -1175,6 +1192,7 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
     <div class="field"><label>Lead</label><div id="reminder-contact-name" style="font-size:16px;color:#f5f3ee;padding:4px 0 8px;"></div></div>
     <div class="field"><label>Quando</label><div id="reminder-when" style="font-size:14px;color:#c9c6be;padding:2px 0 8px;"></div></div>
     <div class="field"><label>Mensagem</label><textarea id="reminder-msg-text" style="min-height:100px;"></textarea></div>
+    <div class="hint" style="margin-bottom:10px;">Se a ponte wa-crm-bridge estiver rodando, essa mensagem já foi (ou já vai ser) enviada sozinha no horário certo. Use o botão abaixo só se quiser mandar de novo ou adiantar.</div>
     <div class="modal-actions"><div></div><div class="right">
       <button class="btn-secondary" id="reminder-dismiss-btn">Dispensar</button>
       <button class="btn-primary" id="reminder-send-btn">Enviar no WhatsApp</button>
@@ -3233,18 +3251,20 @@ async function renderFlows(){
   const flows = await DB.getFlows();
   const listEl = document.getElementById('flows-list');
   if(!flows.length){
-    listEl.innerHTML = '<div class="hint">Nenhum fluxo criado ainda. Clique em "Novo fluxo" pra montar o primeiro.</div>';
+    listEl.innerHTML = '<div style="text-align:center;padding:56px 20px;color:#7A7C82;font-size:16px;">Nenhum fluxo criado ainda.<br>Clique em "Novo fluxo" pra montar o primeiro.</div>';
     return;
   }
-  listEl.innerHTML = flows.map(f => (
-    '<div class="flow-card" data-id="'+f.id+'">'
-    + '<div><b>'+escapeHtml(f.name||'(sem nome)')+'</b><div class="hint" style="margin-top:3px;">'+escapeHtml(_flowTriggerSummary(f))+' · '+(f.nodes||[]).length+' passo(s)</div></div>'
+  listEl.innerHTML = flows.map(f => {
+    const isOn = f.enabled !== false;
+    return '<div class="flow-card" data-id="'+f.id+'">'
+    + '<div><div class="flow-card-name">'+escapeHtml(f.name||'(sem nome)')+'</div>'
+    +   '<div class="flow-card-trigger">'+escapeHtml(_flowTriggerSummary(f))+' &middot; '+(f.nodes||[]).length+' passo(s)</div></div>'
     + '<div class="flow-card-actions">'
-    +   '<label class="flow-toggle"><input type="checkbox" class="flow-enabled-check" data-id="'+f.id+'"'+(f.enabled!==false?' checked':'')+'> Ativo</label>'
+    +   '<label class="flow-status-pill'+(isOn?'':' paused')+'"><input type="checkbox" class="flow-enabled-check" data-id="'+f.id+'"'+(isOn?' checked':'')+'> '+(isOn?'Ativo':'Pausado')+'</label>'
     +   '<button type="button" class="btn-secondary btn-sm" data-edit-flow="'+f.id+'">Editar</button>'
     + '</div>'
-    + '</div>'
-  )).join('');
+    + '</div>';
+  }).join('');
   listEl.querySelectorAll('[data-edit-flow]').forEach(btn => btn.addEventListener('click', () => openFlowEditor(btn.dataset.editFlow)));
   listEl.querySelectorAll('.flow-enabled-check').forEach(chk => chk.addEventListener('change', async () => {
     const all = await DB.getFlows();
@@ -3292,7 +3312,8 @@ function closeFlowEditor(){
 function _applyFlowTriggerTypeUI(){
   const type = document.getElementById('flow-trigger-type').value;
   document.getElementById('flow-trigger-message-fields').style.display = type === 'message' ? 'block' : 'none';
-  document.getElementById('flow-trigger-stage-fields').style.display = type === 'stage' ? 'flex' : 'none';
+  document.getElementById('flow-trigger-stage-pipeline-field').style.display = type === 'stage' ? 'block' : 'none';
+  document.getElementById('flow-trigger-stage-field').style.display = type === 'stage' ? 'block' : 'none';
 }
 
 function _addFlowNode(type){
@@ -3554,8 +3575,35 @@ async function confirmSchedule(){
     m1: cps.m1 <= now
   };
   await DB.saveContacts(contacts);
+  await _syncReminderScheduledMessages(c2, start, cps);
   document.getElementById('schedule-modal-bg').classList.remove('show');
   render();
+}
+
+// agenda o envio automatico (pela ponte wa-crm-bridge) dos 4 momentos da
+// cadencia de lembretes, reaproveitando o mesmo scheduledMessages que ja
+// alimenta o botao de relogio do lead: assim a mensagem sai sozinha mesmo
+// com o CRM fechado, sem depender de alguem clicar "enviar" com a aba
+// aberta. So agenda o que ainda nao passou (ver scheduleReminders acima).
+async function _syncReminderScheduledMessages(c2, start, cps){
+  if(!c2.waNumber) return; // sem WhatsApp, nao ha o que agendar
+  try {
+    const templates = await DB.getScheduleReminderTemplates();
+    const list = (await DB.getScheduledMessages()).filter(m => !(m.source === 'reminder' && m.contactId === c2.id));
+    const now = new Date();
+    ['d3', 'dayAm', 'h1', 'm1'].forEach(key => {
+      if(c2.scheduleReminders[key]) return; // esse checkpoint ja passou, nao agenda
+      const sendAt = cps[key];
+      if(!(sendAt > now)) return;
+      list.push({
+        id: uid('sm'), contactId: c2.id, waNumber: c2.waNumber,
+        text: _fillScheduleTemplate(templates[key], c2, start),
+        sendAt: sendAt.toISOString(), sent: false, source: 'reminder', reminderKey: key,
+        createdAt: new Date().toISOString()
+      });
+    });
+    await DB.saveScheduledMessages(list);
+  } catch(err){ console.error('[CRM] falha ao agendar envio automático da cadência:', err); }
 }
 
 // ---- cadencia de lembretes de agendamento (roda com a aba aberta) --------
