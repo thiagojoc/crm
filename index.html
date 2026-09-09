@@ -137,6 +137,11 @@
 
   .bulk-bar { display: none; align-items: center; gap: 14px; position: sticky; bottom: 0; z-index: 30; background: #1c1f24; border-top: 1px solid rgba(217,169,77,0.25); padding: 12px 20px; box-shadow: 0 -8px 24px -10px rgba(0,0,0,.5); font-size: 15px; color: #f5f3ee; }
   .bulk-bar.show { display: flex; }
+
+  /* aviso de "desfazer" depois de uma acao em massa (editar ou excluir) */
+  .undo-toast { display: none; align-items: center; gap: 16px; position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 80; background: #1c1f24; color: #f5f3ee; border: 1px solid rgba(217,169,77,0.3); border-radius: 10px; padding: 12px 18px; box-shadow: 0 12px 30px -10px rgba(0,0,0,.6); font-size: 15px; }
+  .undo-toast.show { display: flex; }
+  .undo-toast button { flex-shrink: 0; }
   .field label.bulk-remove-tag-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 14.5px; font-weight: 400; color: #f5f3ee; cursor: pointer; text-transform: none; letter-spacing: normal; margin-bottom: 0; }
   .bulk-remove-tag-row input { accent-color: #d9a94d; cursor: pointer; }
   button { border: none; border-radius: 8px; padding: 9px 16px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; }
@@ -604,7 +609,13 @@
   <span id="bulk-count">0 selecionados</span>
   <div style="flex:1;"></div>
   <button class="btn-accent btn-sm" id="bulk-edit-btn">Editar selecionados</button>
+  <button class="btn-danger btn-sm" id="bulk-delete-btn">Excluir selecionados</button>
   <button class="btn-link" id="bulk-clear-btn">Limpar seleção</button>
+</div>
+
+<div class="undo-toast" id="undo-toast">
+  <span id="undo-toast-text"></span>
+  <button type="button" class="btn-link" id="undo-toast-btn">Desfazer</button>
 </div>
 
 <div id="view-contacts" style="display:none;">
@@ -2555,7 +2566,9 @@ function bindStaticEvents(){
   });
 
   document.getElementById('bulk-edit-btn').addEventListener('click', openBulkModal);
+  document.getElementById('bulk-delete-btn').addEventListener('click', bulkDeleteSelected);
   document.getElementById('bulk-clear-btn').addEventListener('click', () => { selectedOppIds.clear(); render(); });
+  document.getElementById('undo-toast-btn').addEventListener('click', undoBulkAction);
   document.getElementById('bulk-cancel-btn').addEventListener('click', closeBulkModal);
   document.getElementById('bulk-apply-btn').addEventListener('click', applyBulkEdit);
   document.getElementById('bulk-pipeline').addEventListener('change', (e) => fillBulkStageOptions(e.target.value));
@@ -3098,6 +3111,52 @@ function fillBulkStageOptions(pipelineId){
     pipeline.stages.map(st => '<option value="'+st.id+'">'+escapeHtml(st.label)+'</option>').join('');
 }
 
+// ---- desfazer acao em massa (editar ou excluir varios leads de uma vez) --
+let _bulkUndoSnapshot = null; // { contacts, opportunities, label }, tirado ANTES da mudanca
+let _bulkUndoTimer = null;
+
+function _snapshotForUndo(){
+  return { contacts: JSON.parse(JSON.stringify(contacts)), opportunities: JSON.parse(JSON.stringify(opportunities)) };
+}
+function showUndoToast(label){
+  document.getElementById('undo-toast-text').textContent = label;
+  document.getElementById('undo-toast').classList.add('show');
+  if(_bulkUndoTimer) clearTimeout(_bulkUndoTimer);
+  _bulkUndoTimer = setTimeout(hideUndoToast, 10000);
+}
+function hideUndoToast(){
+  document.getElementById('undo-toast').classList.remove('show');
+  if(_bulkUndoTimer){ clearTimeout(_bulkUndoTimer); _bulkUndoTimer = null; }
+  _bulkUndoSnapshot = null;
+}
+async function undoBulkAction(){
+  if(!_bulkUndoSnapshot) return;
+  contacts = _bulkUndoSnapshot.contacts;
+  opportunities = _bulkUndoSnapshot.opportunities;
+  await DB.saveContactsAndOpportunities(contacts, opportunities);
+  hideUndoToast();
+  render();
+}
+
+async function bulkDeleteSelected(){
+  const n = selectedOppIds.size;
+  if(!n) return;
+  // excluir um lead exclui o contato inteiro e todas as oportunidades dele
+  // (mesmo comportamento do "Excluir" de um lead so, so que pra varios).
+  const contactIds = new Set(Array.from(selectedOppIds).map(id => {
+    const o = opportunities.find(x => x.id === id);
+    return o ? o.contactId : null;
+  }).filter(Boolean));
+  if(!confirm('Excluir '+contactIds.size+' contato(s) e todas as oportunidades ligadas a eles? Essa ação pode ser desfeita logo em seguida.')) return;
+  _bulkUndoSnapshot = _snapshotForUndo();
+  contacts = contacts.filter(c => !contactIds.has(c.id));
+  opportunities = opportunities.filter(o => !contactIds.has(o.contactId));
+  await DB.saveContactsAndOpportunities(contacts, opportunities);
+  selectedOppIds.clear();
+  render();
+  showUndoToast(contactIds.size+' contato(s) excluído(s).');
+}
+
 async function applyBulkEdit(){
   const pipelineId = document.getElementById('bulk-pipeline').value;
   const stageId = document.getElementById('bulk-stage').value;
@@ -3106,6 +3165,8 @@ async function applyBulkEdit(){
   const tagsToRemove = Array.from(document.querySelectorAll('.bulk-remove-tag-check:checked')).map(c => c.value);
 
   const ids = Array.from(selectedOppIds);
+  const undoCount = ids.length;
+  _bulkUndoSnapshot = _snapshotForUndo();
   const stageChanges = []; // { contactId, pipelineId, stageId }, pra disparar fluxos depois de salvar
   ids.forEach(oppId => {
     const opp = opportunities.find(o => o.id === oppId);
@@ -3138,6 +3199,7 @@ async function applyBulkEdit(){
   closeBulkModal();
   render();
   stageChanges.forEach(c => _maybeTriggerStageFlow(c.contactId, c.pipelineId, c.stageId));
+  showUndoToast('Ação aplicada a '+undoCount+' lead(s).');
 }
 
 function gcalDateFmt(d){ return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
