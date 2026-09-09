@@ -594,6 +594,7 @@
         <button class="menu-item" id="export-btn">Exportar CSV</button>
         <button class="menu-item" id="import-btn">Importar leads</button>
         <button class="menu-item" id="new-col-btn">Nova etapa</button>
+        <button class="menu-item" id="recent-actions-btn">Ações recentes</button>
       </div>
     </div>
     <button class="btn-primary" id="new-lead-btn">Novo lead</button>
@@ -1142,6 +1143,17 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
     <div class="modal-actions"><div></div><div class="right">
       <button class="btn-secondary" id="bulk-cancel-btn">Cancelar</button>
       <button class="btn-primary" id="bulk-apply-btn">Aplicar</button>
+    </div></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="recent-actions-modal-bg">
+  <div class="modal" style="width:480px;">
+    <h3 class="serif">Ações recentes</h3>
+    <div class="hint" style="margin-bottom:14px;">Ações em massa (mais de 2 leads de uma vez: editar, excluir ou importar) ficam aqui a sessão inteira, sem prazo pra desfazer. Desfazer uma ação também desfaz o que veio depois dela.</div>
+    <div id="recent-actions-list"></div>
+    <div class="modal-actions"><div></div><div class="right">
+      <button class="btn-primary" id="recent-actions-close-btn">Fechar</button>
     </div></div>
   </div>
 </div>
@@ -2424,6 +2436,8 @@ function bindStaticEvents(){
   document.getElementById('import-btn').addEventListener('click', () => { resetImportModal(); document.getElementById('import-modal-bg').classList.add('show'); });
   document.getElementById('cancel-import-btn').addEventListener('click', () => document.getElementById('import-modal-bg').classList.remove('show'));
   document.getElementById('confirm-import-btn').addEventListener('click', importLeads);
+  document.getElementById('recent-actions-btn').addEventListener('click', openRecentActionsModal);
+  document.getElementById('recent-actions-close-btn').addEventListener('click', () => document.getElementById('recent-actions-modal-bg').classList.remove('show'));
 
   document.getElementById('import-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -2568,7 +2582,6 @@ function bindStaticEvents(){
   document.getElementById('bulk-edit-btn').addEventListener('click', openBulkModal);
   document.getElementById('bulk-delete-btn').addEventListener('click', bulkDeleteSelected);
   document.getElementById('bulk-clear-btn').addEventListener('click', () => { selectedOppIds.clear(); render(); });
-  document.getElementById('undo-toast-btn').addEventListener('click', undoBulkAction);
   document.getElementById('bulk-cancel-btn').addEventListener('click', closeBulkModal);
   document.getElementById('bulk-apply-btn').addEventListener('click', applyBulkEdit);
   document.getElementById('bulk-pipeline').addEventListener('change', (e) => fillBulkStageOptions(e.target.value));
@@ -3111,31 +3124,87 @@ function fillBulkStageOptions(pipelineId){
     pipeline.stages.map(st => '<option value="'+st.id+'">'+escapeHtml(st.label)+'</option>').join('');
 }
 
-// ---- desfazer acao em massa (editar ou excluir varios leads de uma vez) --
-let _bulkUndoSnapshot = null; // { contacts, opportunities, label }, tirado ANTES da mudanca
-let _bulkUndoTimer = null;
+// ---- desfazer acoes em massa (editar, excluir, importar) ----------------
+// "Em massa" aqui = mais de 2 leads afetados de uma vez. Cada acao assim
+// fica guardada nessa sessao (nao expira em 10s: o aviso rapido some, mas
+// o registro continua em "Ações recentes" ate ser desfeito, substituido
+// por uma acao mais nova, ou a pagina ser recarregada -- fica so na
+// memoria do navegador, nao vai pro Firestore, pra nao arriscar estourar
+// o limite de tamanho do documento guardando varias copias inteiras dos
+// leads).
+const BULK_UNDO_THRESHOLD = 2;
+const ACTION_HISTORY_MAX = 8;
+let _actionHistory = []; // mais recente primeiro: [{ id, label, timestamp, contacts, opportunities }]
+let _undoToastTimer = null;
 
 function _snapshotForUndo(){
   return { contacts: JSON.parse(JSON.stringify(contacts)), opportunities: JSON.parse(JSON.stringify(opportunities)) };
 }
-function showUndoToast(label){
-  document.getElementById('undo-toast-text').textContent = label;
+
+// chame ANTES de mudar contacts/opportunities. So registra (e vira
+// desfazivel) quando afeta mais de 2 leads.
+function _trackBulkAction(count, label, preSnapshot){
+  if(count <= BULK_UNDO_THRESHOLD) return;
+  const entry = Object.assign({ id: uid('act'), label, timestamp: new Date() }, preSnapshot || _snapshotForUndo());
+  _actionHistory.unshift(entry);
+  if(_actionHistory.length > ACTION_HISTORY_MAX) _actionHistory.length = ACTION_HISTORY_MAX;
+  showUndoToast(entry);
+  renderRecentActionsList();
+}
+
+function showUndoToast(entry){
+  document.getElementById('undo-toast-text').textContent = entry.label;
+  const btn = document.getElementById('undo-toast-btn');
+  btn.onclick = () => undoAction(entry.id);
   document.getElementById('undo-toast').classList.add('show');
-  if(_bulkUndoTimer) clearTimeout(_bulkUndoTimer);
-  _bulkUndoTimer = setTimeout(hideUndoToast, 10000);
+  if(_undoToastTimer) clearTimeout(_undoToastTimer);
+  // o aviso rapido some sozinho, mas a acao continua em "Ações recentes"
+  // (menu Mais ações) pra desfazer depois, sem prazo.
+  _undoToastTimer = setTimeout(() => document.getElementById('undo-toast').classList.remove('show'), 10000);
 }
-function hideUndoToast(){
-  document.getElementById('undo-toast').classList.remove('show');
-  if(_bulkUndoTimer){ clearTimeout(_bulkUndoTimer); _bulkUndoTimer = null; }
-  _bulkUndoSnapshot = null;
-}
-async function undoBulkAction(){
-  if(!_bulkUndoSnapshot) return;
-  contacts = _bulkUndoSnapshot.contacts;
-  opportunities = _bulkUndoSnapshot.opportunities;
+
+// desfaz a acao "id" e tudo que veio depois dela (restaurar um estado
+// antigo torna invalidas as acoes mais novas que ele, ja que elas partiam
+// de um estado que deixou de existir).
+async function undoAction(id){
+  const idx = _actionHistory.findIndex(a => a.id === id);
+  if(idx === -1) return;
+  const entry = _actionHistory[idx];
+  contacts = entry.contacts;
+  opportunities = entry.opportunities;
   await DB.saveContactsAndOpportunities(contacts, opportunities);
-  hideUndoToast();
+  _actionHistory.splice(0, idx + 1);
+  document.getElementById('undo-toast').classList.remove('show');
+  renderRecentActionsList();
   render();
+}
+
+function _relativeTime(date){
+  const diffMin = Math.round((Date.now() - date.getTime()) / 60000);
+  if(diffMin < 1) return 'agora mesmo';
+  if(diffMin < 60) return 'há '+diffMin+' min';
+  const diffH = Math.round(diffMin/60);
+  if(diffH < 24) return 'há '+diffH+'h';
+  return date.toLocaleDateString('pt-BR')+' '+date.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function renderRecentActionsList(){
+  const el = document.getElementById('recent-actions-list');
+  if(!el) return;
+  if(!_actionHistory.length){
+    el.innerHTML = '<div class="hint">Nenhuma ação em massa nesta sessão ainda.</div>';
+    return;
+  }
+  el.innerHTML = _actionHistory.map(a =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(217,169,77,0.14);">'
+    + '<div><div style="font-size:15px;">'+escapeHtml(a.label)+'</div><div class="hint">'+_relativeTime(a.timestamp)+'</div></div>'
+    + '<button type="button" class="btn-secondary btn-sm" data-undo-action="'+a.id+'">Desfazer</button>'
+    + '</div>'
+  ).join('');
+  el.querySelectorAll('[data-undo-action]').forEach(btn => btn.addEventListener('click', () => undoAction(btn.dataset.undoAction)));
+}
+function openRecentActionsModal(){
+  renderRecentActionsList();
+  document.getElementById('recent-actions-modal-bg').classList.add('show');
 }
 
 async function bulkDeleteSelected(){
@@ -3147,14 +3216,13 @@ async function bulkDeleteSelected(){
     const o = opportunities.find(x => x.id === id);
     return o ? o.contactId : null;
   }).filter(Boolean));
-  if(!confirm('Excluir '+contactIds.size+' contato(s) e todas as oportunidades ligadas a eles? Essa ação pode ser desfeita logo em seguida.')) return;
-  _bulkUndoSnapshot = _snapshotForUndo();
+  if(!confirm('Excluir '+contactIds.size+' contato(s) e todas as oportunidades ligadas a eles?'+(contactIds.size > BULK_UNDO_THRESHOLD ? ' Dá pra desfazer depois em "Mais ações → Ações recentes".' : ''))) return;
+  _trackBulkAction(contactIds.size, contactIds.size+' contato(s) excluído(s).');
   contacts = contacts.filter(c => !contactIds.has(c.id));
   opportunities = opportunities.filter(o => !contactIds.has(o.contactId));
   await DB.saveContactsAndOpportunities(contacts, opportunities);
   selectedOppIds.clear();
   render();
-  showUndoToast(contactIds.size+' contato(s) excluído(s).');
 }
 
 async function applyBulkEdit(){
@@ -3165,8 +3233,7 @@ async function applyBulkEdit(){
   const tagsToRemove = Array.from(document.querySelectorAll('.bulk-remove-tag-check:checked')).map(c => c.value);
 
   const ids = Array.from(selectedOppIds);
-  const undoCount = ids.length;
-  _bulkUndoSnapshot = _snapshotForUndo();
+  _trackBulkAction(ids.length, 'Ação aplicada a '+ids.length+' lead(s).');
   const stageChanges = []; // { contactId, pipelineId, stageId }, pra disparar fluxos depois de salvar
   ids.forEach(oppId => {
     const opp = opportunities.find(o => o.id === oppId);
@@ -3199,7 +3266,6 @@ async function applyBulkEdit(){
   closeBulkModal();
   render();
   stageChanges.forEach(c => _maybeTriggerStageFlow(c.contactId, c.pipelineId, c.stageId));
-  showUndoToast('Ação aplicada a '+undoCount+' lead(s).');
 }
 
 function gcalDateFmt(d){ return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
@@ -4446,6 +4512,8 @@ function switchImportMode(mode){
 
 async function runFileImport(){
   const fallbackPipeline = pipelineById(currentPipelineId);
+  const before = _snapshotForUndo();
+  let addedCount = 0;
   _importRows.forEach(r => {
     const nameParts = r.nome.split(' ').filter(Boolean);
     const firstName = nameParts[0] || r.nome;
@@ -4458,8 +4526,10 @@ async function runFileImport(){
     const contact = { id: uid('c'), firstName, lastName, office: '', phone: r.telefone, instagram: '', email: '', address: '', tags, note: '', waNumber: waNumberFromPhone(r.telefone), createdAt: new Date().toISOString() };
     contacts.push(contact);
     opportunities.push({ id: uid('o'), contactId: contact.id, pipelineId: targetPipeline.id, stageId: targetStage.id, outcome: 'aberto', createdAt: new Date().toISOString() });
+    addedCount++;
   });
   await DB.saveContactsAndOpportunities(contacts, opportunities);
+  _trackBulkAction(addedCount, addedCount+' lead(s) importado(s).', before);
 }
 
 async function importLeads(){
@@ -4477,6 +4547,8 @@ async function importLeads(){
   if(!text) return;
   const pipeline = pipelineById(currentPipelineId);
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const before = _snapshotForUndo();
+  let addedCount = 0;
   lines.forEach(line => {
     const parts = line.split(',').map(p => p.trim());
     const fullName = parts[0] || ''; if(!fullName) return;
@@ -4489,8 +4561,10 @@ async function importLeads(){
     const contact = { id: uid('c'), firstName, lastName, office, phone, instagram: '', email, address: '', tags: [], note: '', waNumber: waNumberFromPhone(phone), createdAt: new Date().toISOString() };
     contacts.push(contact);
     opportunities.push({ id: uid('o'), contactId: contact.id, pipelineId: pipeline.id, stageId: pipeline.stages[0].id, outcome: 'aberto', createdAt: new Date().toISOString() });
+    addedCount++;
   });
   await DB.saveContactsAndOpportunities(contacts, opportunities);
+  _trackBulkAction(addedCount, addedCount+' lead(s) importado(s).', before);
   render();
 }
 
@@ -4752,9 +4826,20 @@ document.getElementById('forgot-close-btn').addEventListener('click', () => docu
       // precisa apontar pro documento da conta (workspace) que estava ativa.
       const ws = saved.activeWorkspace || 'main';
       if(ws !== 'main') _setCrmDocForWorkspace(ws);
-      await _fbInit();
-      showApp(saved);
-      return;
+      try {
+        await _fbInit();
+        showApp(saved);
+        return;
+      } catch(err){
+        // a conta (workspace) salva no navegador nao existe mais, ou o
+        // acesso a ela foi revogado: NAO pode deixar o CRM_DOC apontando
+        // pra ela, senao ate um login novo, do zero, ia falhar do mesmo
+        // jeito (o _fbInit da tela de login usaria esse mesmo CRM_DOC
+        // quebrado). Volta pro documento principal antes de desistir.
+        console.error('[CRM] falha ao restaurar sessao salva, voltando pra "main":', err && (err.code || err.message));
+        if(ws !== 'main') _setCrmDocForWorkspace('main');
+        localStorage.removeItem(SESSION_KEY);
+      }
     }
   } catch(e){}
   document.getElementById('login-screen').style.display = 'flex';
