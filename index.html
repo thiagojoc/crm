@@ -667,7 +667,7 @@
   <div class="contacts-wrap">
     <table class="contacts-table">
       <thead><tr>
-        <th>Nome</th><th>Escritório</th><th>Telefone</th><th>E-mail</th><th>Instagram</th><th>Tags</th><th>Criado em</th><th>Ações</th>
+        <th>Nome</th><th>Empresa</th><th>Telefone</th><th>E-mail</th><th>Instagram</th><th>Tags</th><th>Criado em</th><th>Ações</th>
       </tr></thead>
       <tbody id="contacts-tbody"></tbody>
     </table>
@@ -985,7 +985,7 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
           <div class="field"><label>Sobrenome</label><input type="text" id="lead-last"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Escritório</label><input type="text" id="lead-office"></div>
+          <div class="field"><label>Empresa</label><input type="text" id="lead-office"></div>
           <div class="field"><label>E-mail</label><input type="text" id="lead-email"></div>
         </div>
         <div class="field-row">
@@ -3947,7 +3947,7 @@ async function confirmSchedule(){
   const title = 'FlowSales - '+meFirstName+' & '+(c.firstName||'').trim();
   const detailsParts = [];
   if(c.phone) detailsParts.push('Telefone: '+c.phone);
-  if(c.office) detailsParts.push('Escritório: '+c.office);
+  if(c.office) detailsParts.push('Empresa: '+c.office);
   const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
     + '&text='+encodeURIComponent(title)
     + '&dates='+gcalDateFmt(start)+'/'+gcalDateFmt(end)
