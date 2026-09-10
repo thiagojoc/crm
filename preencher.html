@@ -16,8 +16,10 @@
   .trust-badge { display: flex; align-items: center; gap: 10px; background: rgba(63,174,129,0.12); border: 1px solid rgba(63,174,129,0.3); border-radius: 8px; padding: 10px 14px; color: var(--ok); font-size: 14px; font-weight: 600; margin-bottom: 26px; }
   .trust-badge svg { flex-shrink: 0; }
   .section-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gold); margin: 22px 0 10px; }
+  .required-hint { font-size: 14px; color: var(--muted); margin: -6px 0 18px; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+  .field label .opt { text-transform: none; font-weight: 500; letter-spacing: normal; }
   .field input, .field select, .field textarea { width: 100%; background: var(--field); border: 1px solid rgba(217,169,77,0.2); border-radius: 8px; color: var(--text); padding: 11px 12px; font-size: 16px; font-family: inherit; }
   .field select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394969c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
   .field textarea { min-height: 80px; resize: vertical; }
@@ -26,7 +28,12 @@
   .field-row .field { flex: 1; min-width: 0; }
   .field .field-hint { font-size: 14px; color: var(--muted); margin-top: 6px; line-height: 1.4; min-height: 18px; }
   .doc-block { margin-bottom: 20px; }
-  .upload-zone { border: 2px dashed rgba(217,169,77,0.3); border-radius: 10px; padding: 20px 16px; text-align: center; cursor: pointer; color: var(--muted); font-size: 15px; }
+  .doc-block-label { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+  .doc-side-row { display: flex; gap: 12px; }
+  .doc-side { flex: 1; min-width: 0; }
+  .doc-side-label { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .upload-zone { border: 2px dashed rgba(217,169,77,0.3); border-radius: 10px; padding: 20px 12px; text-align: center; cursor: pointer; color: var(--muted); font-size: 15px; }
+  .upload-zone.compact { padding: 16px 10px; font-size: 14px; }
   .upload-zone:hover, .upload-zone.dragover { border-color: var(--gold); color: var(--text); background: rgba(217,169,77,0.05); }
   .upload-zone svg { display: block; margin: 0 auto 8px; color: var(--gold); }
   .doc-block input[type=file] { display: none; }
@@ -61,7 +68,7 @@
     <img id="brand-logo-img" alt="" style="display:none;max-height:44px;max-width:100%;">
     <div class="brand-word" id="brand-word">FlowSales</div>
   </div>
-  <div id="content"></div>
+  <div id="content"><div class="hint">Carregando...</div></div>
 </div>
 
 <script type="module">
@@ -83,7 +90,8 @@ const _fbDB = getFirestore(_fbApp);
 const _fbAuth = getAuth(_fbApp);
 const _fbStorage = getStorage(_fbApp);
 
-const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB por arquivo, mesmo teto do resto do CRM
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB por arquivo (mesmo teto do storage.rules)
+const UPLOAD_TIMEOUT_MS = 90 * 1000; // se o upload nao terminar nesse tempo, desiste e avisa (em vez de travar pra sempre)
 
 function uid(prefix){ return (prefix||'x') + Date.now() + Math.floor(Math.random()*100000); }
 function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -92,6 +100,11 @@ function formatBytes(n){
   if(n < 1024) return n+' B';
   if(n < 1024*1024) return (n/1024).toFixed(0)+' KB';
   return (n/(1024*1024)).toFixed(1)+' MB';
+}
+function withTimeout(promise, ms, label){
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout: '+label)), ms); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 // mascaras: aplicadas a cada tecla digitada, so pra jogar pontuacao/traco no
@@ -151,27 +164,88 @@ async function applyBranding(workspaceId){
 }
 
 const params = new URLSearchParams(location.search);
-const workspaceId = params.get('w');
-const contactId = params.get('c');
-const nomeParam = params.get('n') || '';
-if(workspaceId) applyBranding(workspaceId);
-const docsParam = (params.get('docs') || '').split('|').map(s => s.trim()).filter(Boolean);
 const content = document.getElementById('content');
-
 const ESTADO_CIVIL_OPTIONS = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
 
-if(!workspaceId || !contactId){
-  content.innerHTML = '<div class="invalid">Esse link não é válido ou está incompleto. Peça pra quem te enviou conferir e mandar de novo.</div>';
-} else {
+// resolve os dados do link: o formato novo e so um codigo curto (?id=XYZ),
+// que aponta pra um documento em crm_sjc_intake_links com workspace/contato/
+// nome/lista de documentos (ver sendIntakeLink no CRM). Mantem compatibilidade
+// com links antigos, gerados antes dessa mudanca, que levavam tudo direto na
+// URL (?w=...&c=...&n=...&docs=...).
+async function resolveLinkParams(){
+  const idParam = params.get('id');
+  if(idParam){
+    try {
+      const snap = await getDoc(doc(_fbDB, 'crm_sjc_intake_links', idParam));
+      if(!snap.exists()) return null;
+      const d = snap.data();
+      return {
+        workspaceId: d.workspaceId,
+        contactId: d.contactId,
+        nomeParam: d.nome || '',
+        docsParam: Array.isArray(d.documents) ? d.documents : []
+      };
+    } catch(err){
+      console.error('[preencher] falha ao resolver link:', err);
+      return null;
+    }
+  }
+  const w = params.get('w'), c = params.get('c');
+  if(!w || !c) return null;
+  return {
+    workspaceId: w,
+    contactId: c,
+    nomeParam: params.get('n') || '',
+    docsParam: (params.get('docs') || '').split('|').map(s => s.trim()).filter(Boolean)
+  };
+}
+
+(async function main(){
+  const resolved = await resolveLinkParams();
+  if(!resolved){
+    content.innerHTML = '<div class="invalid">Esse link não é válido ou está incompleto. Peça pra quem te enviou conferir e mandar de novo.</div>';
+    return;
+  }
+  const { workspaceId, contactId, nomeParam, docsParam } = resolved;
+  applyBranding(workspaceId);
+
   // indices (dentro de docsParam) de documentos que so fazem sentido se a
   // pessoa for casada (ex.: certidao de casamento) -- ficam escondidos ate
   // ela selecionar "Casado(a)" no estado civil.
   const casamentoIdxs = docsParam.map((d, i) => stripAccents(d).toLowerCase().includes('casamento') ? i : -1).filter(i => i >= 0);
+  // o documento de RG/CNH ganha duas caixas lado a lado (frente e verso) em
+  // vez de uma unica area de upload.
+  const rgIdx = docsParam.findIndex(d => /\b(rg|cnh)\b/.test(stripAccents(d).toLowerCase()));
 
   const docsHtml = docsParam.length ? '<div class="section-title">Documentos</div>' + docsParam.map((docName, i) => {
     const hidden = casamentoIdxs.includes(i);
-    return '<div class="doc-block" id="doc-block-'+i+'"'+(hidden ? ' style="display:none;"' : '')+'>'
-      + '<div class="field" style="margin-bottom:8px;"><label>'+escapeHtml(docName)+'</label></div>'
+    const wrapOpen = '<div class="doc-block" id="doc-block-'+i+'"'+(hidden ? ' style="display:none;"' : '')+'>'
+      + '<div class="doc-block-label">'+escapeHtml(docName)+'</div>';
+    if(i === rgIdx){
+      return wrapOpen
+        + '<div class="doc-side-row">'
+          + '<div class="doc-side">'
+            + '<div class="doc-side-label">Frente</div>'
+            + '<div class="upload-zone compact" id="upload-zone-'+i+'-frente">'
+              + '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+              + 'Anexar frente'
+            + '</div>'
+            + '<input type="file" id="file-input-'+i+'-frente" multiple>'
+            + '<div class="file-list" id="file-list-'+i+'-frente"></div>'
+          + '</div>'
+          + '<div class="doc-side">'
+            + '<div class="doc-side-label">Verso</div>'
+            + '<div class="upload-zone compact" id="upload-zone-'+i+'-verso">'
+              + '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+              + 'Anexar verso'
+            + '</div>'
+            + '<input type="file" id="file-input-'+i+'-verso" multiple>'
+            + '<div class="file-list" id="file-list-'+i+'-verso"></div>'
+          + '</div>'
+        + '</div>'
+      + '</div>';
+    }
+    return wrapOpen
       + '<div class="upload-zone" id="upload-zone-'+i+'">'
         + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
         + 'Clique aqui ou arraste o arquivo (foto ou PDF)'
@@ -179,7 +253,7 @@ if(!workspaceId || !contactId){
       + '<input type="file" id="file-input-'+i+'" multiple>'
       + '<div class="file-list" id="file-list-'+i+'"></div>'
     + '</div>';
-  }).join('') + '<div class="hint" style="margin-top:-8px;margin-bottom:4px;">Pode mandar mais de uma foto por documento (ex.: frente e verso). Cada arquivo até 20 MB.</div>' : '';
+  }).join('') + '<div class="hint" style="margin-top:-8px;margin-bottom:4px;">Cada arquivo até 50 MB.</div>' : '';
 
   content.innerHTML = `
     <h1>Envio de dados e documentos</h1>
@@ -188,33 +262,39 @@ if(!workspaceId || !contactId){
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       <span>Suas informações e documentos são confidenciais e protegidos.</span>
     </div>
-    <form id="intake-form">
+    <form id="intake-form" novalidate>
       <div class="field"><label>Nome completo</label><input type="text" id="f-nome" value="${escapeHtml(nomeParam)}" required></div>
       <div class="field-row">
-        <div class="field"><label>RG</label><input type="text" id="f-rg" placeholder="Ex.: MG-15.485-303" inputmode="text"></div>
-        <div class="field"><label>CPF</label><input type="text" id="f-cpf" placeholder="000.000.000-00" inputmode="numeric"></div>
+        <div class="field"><label>RG</label><input type="text" id="f-rg" placeholder="Ex.: MG-15.485-303" inputmode="text" required></div>
+        <div class="field"><label>CPF</label><input type="text" id="f-cpf" placeholder="000.000.000-00" inputmode="numeric" required></div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>CEP</label>
-          <input type="text" id="f-cep" placeholder="00000-000" inputmode="numeric">
+          <input type="text" id="f-cep" placeholder="00000-000" inputmode="numeric" required>
           <div class="field-hint" id="cep-hint"></div>
         </div>
-        <div class="field"><label>Número</label><input type="text" id="f-numero" inputmode="numeric"></div>
+        <div class="field"><label>Número</label><input type="text" id="f-numero" inputmode="numeric" required></div>
       </div>
-      <div class="field"><label>Endereço</label><input type="text" id="f-endereco" placeholder="Rua, bairro, cidade - UF"></div>
+      <div class="field"><label>Rua</label><input type="text" id="f-rua" required></div>
+      <div class="field"><label>Bairro</label><input type="text" id="f-bairro" required></div>
       <div class="field-row">
-        <div class="field"><label>E-mail</label><input type="email" id="f-email"></div>
-        <div class="field"><label>Profissão</label><input type="text" id="f-profissao"></div>
+        <div class="field"><label>Cidade</label><input type="text" id="f-cidade" required></div>
+        <div class="field"><label>Estado</label><input type="text" id="f-estado" maxlength="2" placeholder="UF" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>E-mail</label><input type="email" id="f-email" required></div>
+        <div class="field"><label>Profissão</label><input type="text" id="f-profissao" required></div>
       </div>
       <div class="field">
         <label>Estado civil</label>
-        <select id="f-estado-civil">
+        <select id="f-estado-civil" required>
           <option value="">Selecione...</option>
           ${ESTADO_CIVIL_OPTIONS.map(o => '<option value="'+escapeHtml(o)+'">'+escapeHtml(o)+'</option>').join('')}
         </select>
       </div>
       ${docsHtml}
+      <div class="required-hint">Todos os campos e documentos acima são obrigatórios.</div>
       <button type="submit" id="submit-btn">Enviar</button>
       <div class="msg" id="msg"></div>
     </form>
@@ -222,9 +302,11 @@ if(!workspaceId || !contactId){
 
   const msgEl = document.getElementById('msg');
   const submitBtn = document.getElementById('submit-btn');
+  const formEl = document.getElementById('intake-form');
 
   document.getElementById('f-rg').addEventListener('input', (e) => { e.target.value = formatRG(e.target.value); });
   document.getElementById('f-cpf').addEventListener('input', (e) => { e.target.value = formatCPF(e.target.value); });
+  document.getElementById('f-estado').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0,2); });
   document.getElementById('f-cep').addEventListener('input', (e) => {
     e.target.value = formatCEP(e.target.value);
     const digits = onlyDigits(e.target.value);
@@ -239,9 +321,10 @@ if(!workspaceId || !contactId){
       const res = await fetch('https://viacep.com.br/ws/'+cep+'/json/');
       const data = await res.json();
       if(data.erro){ cepHint.textContent = 'CEP não encontrado, preencha o endereço manualmente.'; return; }
-      const cidadeUf = data.localidade && data.uf ? data.localidade+' - '+data.uf : (data.localidade || data.uf || '');
-      const parts = [data.logradouro, data.bairro, cidadeUf].filter(Boolean);
-      document.getElementById('f-endereco').value = parts.join(', ');
+      if(data.logradouro) document.getElementById('f-rua').value = data.logradouro;
+      if(data.bairro) document.getElementById('f-bairro').value = data.bairro;
+      if(data.localidade) document.getElementById('f-cidade').value = data.localidade;
+      if(data.uf) document.getElementById('f-estado').value = data.uf;
       cepHint.textContent = '';
       document.getElementById('f-numero').focus();
     } catch(err){
@@ -258,33 +341,51 @@ if(!workspaceId || !contactId){
     });
   });
 
-  // um array de arquivos selecionados por documento (mesma posicao de docsParam)
+  // um array de arquivos por documento (mesma posicao de docsParam). O
+  // indice do RG/CNH guarda os dois lados juntos (cada arquivo carrega em
+  // qual lado foi anexado, so pra desenhar a lista certa).
   const selectedFilesByDoc = docsParam.map(() => []);
 
-  function renderDocFileList(i){
-    const listEl = document.getElementById('file-list-'+i);
-    listEl.innerHTML = selectedFilesByDoc[i].map((f, j) =>
-      '<div class="file-item"><span class="file-name">'+escapeHtml(f.name)+'</span><span class="file-size">'+formatBytes(f.size)+'</span><button type="button" data-remove="'+j+'" title="Remover">&times;</button></div>'
-    ).join('');
+  function renderDocFileList(i, side){
+    const listId = side ? 'file-list-'+i+'-'+side : 'file-list-'+i;
+    const listEl = document.getElementById(listId);
+    const files = side ? selectedFilesByDoc[i].filter(f => f._side === side) : selectedFilesByDoc[i];
+    listEl.innerHTML = files.map(f => {
+      const j = selectedFilesByDoc[i].indexOf(f);
+      return '<div class="file-item"><span class="file-name">'+escapeHtml(f.name)+'</span><span class="file-size">'+formatBytes(f.size)+'</span><button type="button" data-remove="'+j+'" title="Remover">&times;</button></div>';
+    }).join('');
     listEl.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => {
       selectedFilesByDoc[i].splice(parseInt(btn.dataset.remove, 10), 1);
-      renderDocFileList(i);
+      renderDocFileList(i, side);
     }));
   }
-  function addDocFiles(i, fileArr){
+  function addDocFiles(i, fileArr, side){
     msgEl.textContent = '';
     msgEl.className = 'msg';
     Array.from(fileArr).forEach(f => {
       if(f.size > MAX_FILE_BYTES){
-        msgEl.textContent = 'O arquivo "'+f.name+'" passa de 20 MB e não foi adicionado.';
+        msgEl.textContent = 'O arquivo "'+f.name+'" passa de 50 MB e não foi adicionado.';
         msgEl.className = 'msg error';
         return;
       }
+      if(side) f._side = side;
       selectedFilesByDoc[i].push(f);
     });
-    renderDocFileList(i);
+    renderDocFileList(i, side);
   }
   docsParam.forEach((docName, i) => {
+    if(i === rgIdx){
+      ['frente', 'verso'].forEach(side => {
+        const zone = document.getElementById('upload-zone-'+i+'-'+side);
+        const fileInput = document.getElementById('file-input-'+i+'-'+side);
+        zone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => { addDocFiles(i, fileInput.files, side); fileInput.value = ''; });
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', (e) => { e.preventDefault(); zone.classList.remove('dragover'); addDocFiles(i, e.dataTransfer.files, side); });
+      });
+      return;
+    }
     const zone = document.getElementById('upload-zone-'+i);
     const fileInput = document.getElementById('file-input-'+i);
     zone.addEventListener('click', () => fileInput.click());
@@ -298,10 +399,33 @@ if(!workspaceId || !contactId){
     });
   });
 
-  document.getElementById('intake-form').addEventListener('submit', async (e) => {
+  // valida documentos obrigatorios: todo doc visivel precisa de pelo menos
+  // 1 arquivo (o RG/CNH exige frente E verso separadamente).
+  function validateDocs(){
+    const missing = [];
+    docsParam.forEach((docName, i) => {
+      const visible = document.getElementById('doc-block-'+i).style.display !== 'none';
+      if(!visible) return;
+      if(i === rgIdx){
+        if(!selectedFilesByDoc[i].some(f => f._side === 'frente')) missing.push(docName+' (frente)');
+        if(!selectedFilesByDoc[i].some(f => f._side === 'verso')) missing.push(docName+' (verso)');
+      } else if(selectedFilesByDoc[i].length === 0){
+        missing.push(docName);
+      }
+    });
+    return missing;
+  }
+
+  formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if(!formEl.checkValidity()){ formEl.reportValidity(); return; }
+    const missingDocs = validateDocs();
+    if(missingDocs.length){
+      msgEl.textContent = 'Falta anexar: ' + missingDocs.join(', ') + '.';
+      msgEl.className = 'msg error';
+      return;
+    }
     const nome = document.getElementById('f-nome').value.trim();
-    if(!nome){ msgEl.textContent = 'Informe seu nome.'; msgEl.className = 'msg error'; return; }
     submitBtn.disabled = true;
     msgEl.className = 'msg progress';
     try {
@@ -318,12 +442,13 @@ if(!workspaceId || !contactId){
         for(const f of selectedFilesByDoc[i]){
           uploaded++;
           msgEl.textContent = 'Enviando arquivo '+uploaded+' de '+totalFiles+'...';
-          const safeName = (docSlug ? docSlug+'__' : '') + f.name;
+          const sidePrefix = f._side ? f._side+'-' : '';
+          const safeName = (docSlug ? docSlug+'__' : '') + sidePrefix + f.name;
           const path = 'crm_sjc_intake/'+workspaceId+'/'+contactId+'/'+submissionId+'/'+safeName;
           const fileRef = ref(_fbStorage, path);
-          await uploadBytes(fileRef, f);
-          const url = await getDownloadURL(fileRef);
-          files.push({ name: f.name, url, size: f.size, contentType: f.type || '', doc: docName });
+          await withTimeout(uploadBytes(fileRef, f), UPLOAD_TIMEOUT_MS, 'upload de '+f.name);
+          const url = await withTimeout(getDownloadURL(fileRef), UPLOAD_TIMEOUT_MS, 'link de '+f.name);
+          files.push({ name: f.name, url, size: f.size, contentType: f.type || '', doc: docName, side: f._side || '' });
         }
       }
 
@@ -337,7 +462,10 @@ if(!workspaceId || !contactId){
           cpf: document.getElementById('f-cpf').value.trim(),
           cep: document.getElementById('f-cep').value.trim(),
           numero: document.getElementById('f-numero').value.trim(),
-          endereco: document.getElementById('f-endereco').value.trim(),
+          rua: document.getElementById('f-rua').value.trim(),
+          bairro: document.getElementById('f-bairro').value.trim(),
+          cidade: document.getElementById('f-cidade').value.trim(),
+          estado: document.getElementById('f-estado').value.trim(),
           email: document.getElementById('f-email').value.trim(),
           profissao: document.getElementById('f-profissao').value.trim(),
           estadoCivil: document.getElementById('f-estado-civil').value
@@ -354,12 +482,15 @@ if(!workspaceId || !contactId){
       `;
     } catch(err){
       console.error('[preencher] falha ao enviar:', err);
-      msgEl.textContent = 'Não deu pra enviar agora. Verifique sua internet e tente de novo em instantes.';
+      const isTimeout = err && String(err.message||'').startsWith('timeout:');
+      msgEl.textContent = isTimeout
+        ? 'O envio demorou demais e foi interrompido. Verifique sua internet e tente de novo.'
+        : 'Não deu pra enviar agora. Verifique sua internet e tente de novo em instantes.';
       msgEl.className = 'msg error';
       submitBtn.disabled = false;
     }
   });
-}
+})();
 </script>
 </body>
 </html>
