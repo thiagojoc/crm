@@ -75,7 +75,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const _fbConfig = {
   apiKey: "AIzaSyBTqzj-9-AOI181sPCKvRsVGDujkWogIGI",
@@ -88,10 +87,28 @@ const _fbConfig = {
 const _fbApp = initializeApp(_fbConfig);
 const _fbDB = getFirestore(_fbApp);
 const _fbAuth = getAuth(_fbApp);
-const _fbStorage = getStorage(_fbApp);
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB por arquivo (mesmo teto do storage.rules)
+// os documentos anexados vao pro Cloudinary (plano gratis, sem cartao) em vez
+// do Firebase Storage: o Firebase exige o plano Blaze (com pre-pagamento no
+// Brasil) pra ativar o Storage em projetos que nunca usaram antes. O upload
+// e "unsigned" (preset publico configurado no painel do Cloudinary), entao o
+// lead consegue subir o arquivo sem precisar de senha nem de login nenhum.
+const CLOUDINARY_CLOUD_NAME = 'ndukfkh0';
+const CLOUDINARY_UPLOAD_PRESET = 'crm_intake';
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB por arquivo (teto do plano gratis do Cloudinary pra foto/PDF)
 const UPLOAD_TIMEOUT_MS = 90 * 1000; // se o upload nao terminar nesse tempo, desiste e avisa (em vez de travar pra sempre)
+
+async function uploadToCloudinary(file){
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_CLOUD_NAME+'/auto/upload', { method: 'POST', body: formData });
+  if(!res.ok){
+    const detail = await res.text().catch(() => '');
+    throw new Error('cloudinary upload falhou ('+res.status+'): '+detail);
+  }
+  return res.json();
+}
 
 function uid(prefix){ return (prefix||'x') + Date.now() + Math.floor(Math.random()*100000); }
 function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -253,7 +270,7 @@ async function resolveLinkParams(){
       + '<input type="file" id="file-input-'+i+'" multiple>'
       + '<div class="file-list" id="file-list-'+i+'"></div>'
     + '</div>';
-  }).join('') + '<div class="hint" style="margin-top:-8px;margin-bottom:4px;">Cada arquivo até 50 MB.</div>' : '';
+  }).join('') + '<div class="hint" style="margin-top:-8px;margin-bottom:4px;">Cada arquivo até 10 MB.</div>' : '';
 
   content.innerHTML = `
     <h1>Envio de dados e documentos</h1>
@@ -364,7 +381,7 @@ async function resolveLinkParams(){
     msgEl.className = 'msg';
     Array.from(fileArr).forEach(f => {
       if(f.size > MAX_FILE_BYTES){
-        msgEl.textContent = 'O arquivo "'+f.name+'" passa de 50 MB e não foi adicionado.';
+        msgEl.textContent = 'O arquivo "'+f.name+'" passa de 10 MB e não foi adicionado.';
         msgEl.className = 'msg error';
         return;
       }
@@ -438,17 +455,11 @@ async function resolveLinkParams(){
       let uploaded = 0;
       for(let i = 0; i < docsParam.length; i++){
         const docName = docsParam[i];
-        const docSlug = stripAccents(docName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         for(const f of selectedFilesByDoc[i]){
           uploaded++;
           msgEl.textContent = 'Enviando arquivo '+uploaded+' de '+totalFiles+'...';
-          const sidePrefix = f._side ? f._side+'-' : '';
-          const safeName = (docSlug ? docSlug+'__' : '') + sidePrefix + f.name;
-          const path = 'crm_sjc_intake/'+workspaceId+'/'+contactId+'/'+submissionId+'/'+safeName;
-          const fileRef = ref(_fbStorage, path);
-          await withTimeout(uploadBytes(fileRef, f), UPLOAD_TIMEOUT_MS, 'upload de '+f.name);
-          const url = await withTimeout(getDownloadURL(fileRef), UPLOAD_TIMEOUT_MS, 'link de '+f.name);
-          files.push({ name: f.name, url, size: f.size, contentType: f.type || '', doc: docName, side: f._side || '' });
+          const uploadResult = await withTimeout(uploadToCloudinary(f), UPLOAD_TIMEOUT_MS, 'upload de '+f.name);
+          files.push({ name: f.name, url: uploadResult.secure_url, size: f.size, contentType: f.type || '', doc: docName, side: f._side || '' });
         }
       }
 
