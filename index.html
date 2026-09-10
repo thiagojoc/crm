@@ -57,17 +57,17 @@
      dourada suave, sombra leve, hierarquia clara nome > gatilho > acoes). */
   .flow-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #FFFFFF; border: 1px solid rgba(217,169,77,0.28); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(30,32,36,0.06); }
   .flow-card-name { font-size: 17px; font-weight: 700; color: #1E2024; }
-  .flow-card-trigger { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #7A7C82; margin-top: 5px; }
+  .flow-card-trigger { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #686A70; margin-top: 5px; }
   .flow-card-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   .flow-status-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 4px 10px; border-radius: 10px; background: rgba(63,174,129,0.12); color: #2E8763; }
-  .flow-status-pill.paused { background: rgba(122,124,130,0.12); color: #7A7C82; }
+  .flow-status-pill.paused { background: rgba(122,124,130,0.12); color: #686A70; }
   .flow-status-pill input { margin: 0; }
 
   /* tela cheia de montagem do fluxo (pagina propria, nao um popup) */
   .flow-editor-topbar { display: flex; align-items: center; gap: 16px; padding: 18px 28px; border-bottom: 1px solid rgba(217,169,77,0.22); }
   #flow-name { font-size: 20px; font-weight: 700; font-family: var(--font-sans); letter-spacing: -0.01em; border: none; background: none; padding: 6px 0; color: #1E2024; flex: 1; min-width: 160px; }
   #flow-name:focus { outline: none; border-bottom: 2px solid #d9a94d; }
-  #flow-name::placeholder { color: #9A9CA3; font-weight: 600; }
+  #flow-name::placeholder { color: #686A70; font-weight: 600; }
   .flow-editor-trigger-panel { display: flex; align-items: flex-end; gap: 16px; padding: 18px 28px; background: #F7F6F2; border-bottom: 1px solid rgba(217,169,77,0.18); flex-wrap: wrap; }
   .flow-editor-trigger-panel .field { margin-bottom: 0; }
   .flow-editor-toolbar { display: flex; align-items: center; gap: 10px; padding: 16px 28px; flex-wrap: wrap; border-bottom: 1px solid rgba(217,169,77,0.14); }
@@ -76,13 +76,13 @@
   .flow-canvas { position: relative; width: 1900px; height: 1300px; }
   #flow-canvas-svg { position: absolute; top: 0; left: 0; width: 1900px; height: 1300px; pointer-events: none; }
   .flow-node { position: absolute; width: 260px; background: #FFFFFF; border: 1px solid rgba(217,169,77,0.32); border-radius: 12px; padding: 16px; box-shadow: 0 4px 14px -6px rgba(30,32,36,0.16); }
-  .flow-node-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #B8862F; cursor: grab; touch-action: none; user-select: none; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(217,169,77,0.16); }
+  .flow-node-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #8a6320; cursor: grab; touch-action: none; user-select: none; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(217,169,77,0.16); }
   .flow-node-head span { flex: 1; }
-  .flow-node-copy, .flow-node-del { background: none; border: none; color: #9A9CA3; font-size: 16px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
-  .flow-node-copy:hover { color: #B8862F; background: rgba(217,169,77,0.1); }
+  .flow-node-copy, .flow-node-del { background: none; border: none; color: #686A70; font-size: 16px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  .flow-node-copy:hover { color: #8a6320; background: rgba(217,169,77,0.1); }
   .flow-node-del:hover { color: #d9614a; background: rgba(217,97,74,0.1); }
   .flow-node-text { width: 100%; min-height: 72px; background: #FAFAF7; border: 1px solid rgba(217,169,77,0.25); border-radius: 7px; color: #1E2024; padding: 9px 10px; font-size: 15px; font-family: inherit; line-height: 1.45; resize: vertical; }
-  .flow-node-next-label { display: block; font-size: 14px; color: #7A7C82; margin: 12px 0 5px; }
+  .flow-node-next-label { display: block; font-size: 14px; color: #686A70; margin: 12px 0 5px; }
   .flow-node-next, .flow-node-wait-amount, .flow-node-wait-unit, .flow-node-wait-mode { width: 100%; background: #FAFAF7; border: 1px solid rgba(217,169,77,0.25); border-radius: 7px; color: #1E2024; padding: 8px 9px; font-size: 14.5px; font-family: inherit; }
   .flow-node-wait-row { display: flex; gap: 8px; }
   .flow-node-wait-row .flow-node-wait-amount { width: 74px; flex-shrink: 0; }
@@ -108,7 +108,7 @@
 
   .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; padding: 20px; }
   .kpi-card { background: #16181c; border: 1px solid rgba(217,169,77,0.14); border-radius: 12px; padding: 22px 18px; text-align: center; }
-  .kpi-num { font-size: 34px; font-weight: 700; font-family: var(--font-sans); color: #d9a94d; }
+  .kpi-num { font-size: 34px; font-weight: 700; font-family: var(--font-sans); color: #8a6320; }
   .kpi-lbl { font-size: 14px; color: #c3c5cb; text-transform: uppercase; letter-spacing: .05em; margin-top: 8px; font-weight: 700; }
   .kpi-adjust { display: flex; align-items: center; justify-content: center; gap: 12px; }
   .kpi-adjust-btn { width: 26px; height: 26px; border-radius: 50%; background: #1c1f24; border: 1px solid rgba(217,169,77,0.28); color: #d9a94d; font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; flex-shrink: 0; }
@@ -117,10 +117,10 @@
   /* abordagens */
   .approach-wrap { padding: 20px; max-width: 760px; }
   .approach-section { margin-bottom: 32px; }
-  .approach-section h3 { margin: 0 0 4px; font-size: var(--fs-subtitle); line-height: var(--lh-subtitle); font-weight: 600; color: #d9a94d; }
+  .approach-section h3 { margin: 0 0 4px; font-size: var(--fs-subtitle); line-height: var(--lh-subtitle); font-weight: 600; color: #8a6320; }
   .approach-hint { font-size: 15px; color: #9a9da6; margin: 0 0 14px; }
   .approach-card { background: #16181c; border: 1px solid rgba(217,169,77,0.14); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
-  .approach-card-label { font-size: 13.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #d9a94d; margin-bottom: 8px; }
+  .approach-card-label { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #8a6320; margin-bottom: 8px; }
   .approach-text { font-size: 16px; color: #f5f3ee; line-height: 1.6; white-space: pre-line; margin-bottom: 10px; }
   .approach-textarea { width: 100%; min-height: 100px; background: #1c1f24; border: 1px solid rgba(217,169,77,0.3); border-radius: 7px; color: #f5f3ee; padding: 9px 11px; font-size: 16px; line-height: 1.6; font-family: inherit; margin-bottom: 10px; resize: vertical; }
   .approach-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -132,6 +132,11 @@
   .toolbar input[type=text], .toolbar input[type=date], .toolbar select { background: #14161a; border: 1px solid rgba(217,169,77,0.18); border-radius: 8px; color: #f5f3ee; padding: 9px 12px; font-size: 16px; }
   .toolbar input[type=text] { min-width: 200px; }
   .toolbar input[type=text]:focus, .toolbar input[type=date]:focus, .toolbar select:focus { outline: none; border-color: #d9a94d; }
+  .search-wrap { position: relative; min-width: 200px; }
+  .search-wrap input[type=text] { width: 100%; min-width: 0; padding-right: 32px; }
+  .search-clear { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); align-items: center; justify-content: center; width: 24px; height: 24px; background: none; border: none; cursor: pointer; color: #94969c; font-size: 17px; line-height: 1; border-radius: 5px; }
+  .search-clear.show { display: flex; }
+  .search-clear:hover { color: #d9614a; background: rgba(217,97,74,0.1); }
   .kpi-custom-range { display: none; gap: 8px; align-items: center; }
   .kpi-custom-range.show { display: flex; }
 
@@ -286,7 +291,7 @@
   .field input, .field select, .field textarea { width: 100%; background: #1c1f24; border: 1px solid rgba(217,169,77,0.18); border-radius: 7px; color: #f5f3ee; padding: 9px 11px; font-size: 16px; font-family: inherit; }
   .field textarea { min-height: 55px; resize: vertical; }
   .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #d9a94d; }
-  .field .hint { font-size: var(--fs-caption); line-height: var(--lh-caption); color: #7c7e85; margin-top: 4px; }
+  .field .hint { font-size: var(--fs-caption); line-height: var(--lh-caption); color: #94969c; margin-top: 4px; }
   .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; }
   .modal-actions .right { display: flex; gap: 8px; }
   .modal hr { border: none; border-top: 1px solid rgba(217,169,77,0.14); margin: 18px 0; }
@@ -332,7 +337,7 @@
   /* mostrar/ocultar senha */
   .pass-wrap { position: relative; }
   .pass-wrap input { padding-right: 40px; }
-  .pass-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #7c7e85; padding: 6px; display: flex; align-items: center; }
+  .pass-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94969c; padding: 6px; display: flex; align-items: center; }
   .pass-eye:hover { color: #d9a94d; }
 
   /* filtros (popover) */
@@ -379,25 +384,25 @@
   .login-msg { font-size: 15px; color: #3fae81; margin-top: 8px; min-height: 16px; }
   #login-form button[type=submit] { width: 100%; margin-top: 6px; }
   .login-forgot { text-align: center; margin-top: 16px; }
-  .login-credit { text-align: center; margin-top: 22px; font-size: 14px; color: #7c7e85; }
+  .login-credit { text-align: center; margin-top: 22px; font-size: 14px; color: #94969c; }
 
   /* conteudo em tema claro (fundo branco), com cabecalho/abas/barra de
      ferramentas continuando escuros como moldura por cima. */
   #view-opp, #view-contacts, #view-kpis, #view-approach, #view-calls, #view-flows, #view-flow-editor { background: #FFFFFF; color: #1E2024; min-height: calc(100vh - 108px); }
   .col { background: #F7F6F2; border-color: rgba(217,169,77,0.22); }
   .col-title { color: #1E2024; }
-  .col-count { color: #7A7C82; }
-  .col-del { color: #9A9CA3; }
-  .empty-col { color: #9A9CA3; }
+  .col-count { color: #686A70; }
+  .col-del { color: #686A70; }
+  .empty-col { color: #686A70; }
   .card { background: #FFFFFF; border-color: rgba(217,169,77,0.28); box-shadow: 0 1px 3px rgba(30,32,36,0.06); }
   .card .name { color: #1E2024; }
   .card .office, .card .phone { color: #5B5D63; }
-  .card .card-label { color: #7A7C82; }
+  .card .card-label { color: #686A70; }
   .card-icon-btn { background: #F2F1EC; border-color: rgba(217,169,77,0.25); color: #5B5D63; }
   .card-select, .col-select-all { background: #FFFFFF; }
-  .empty-state { color: #7A7C82; }
+  .empty-state { color: #686A70; }
   .empty-state h2 { color: #1E2024; }
-  table.contacts-table th { color: #7A7C82; border-bottom-color: rgba(217,169,77,0.2); }
+  table.contacts-table th { color: #686A70; border-bottom-color: rgba(217,169,77,0.2); }
   table.contacts-table td { border-bottom-color: rgba(30,32,36,0.08); color: #1E2024; }
   table.contacts-table tr:hover td { background: rgba(217,169,77,0.06); }
   .kpi-card { background: #F7F6F2; border-color: rgba(217,169,77,0.22); }
@@ -408,7 +413,7 @@
   .approach-card { background: #F7F6F2; border-color: rgba(217,169,77,0.22); }
   .approach-text { color: #1E2024; }
   .approach-textarea { background: #FFFFFF; border-color: rgba(217,169,77,0.3); color: #1E2024; }
-  .approach-hint { color: #7A7C82; }
+  .approach-hint { color: #686A70; }
 
   /* ---- Calls realizadas ------------------------------------------------ */
   .call-row td { cursor: pointer; }
@@ -418,7 +423,7 @@
   .call-detail-meta { font-size: 15px; color: #5B5D63; margin-top: 6px; }
   .call-detail-scores { display: flex; gap: 14px; flex-wrap: wrap; }
   .call-score-pill { background: #FFFFFF; border: 1px solid rgba(217,169,77,0.3); border-radius: 12px; padding: 10px 18px; text-align: center; min-width: 92px; }
-  .call-score-pill span { display: block; font-family: var(--font-sans); font-size: 26px; font-weight: 700; color: #d9a94d; }
+  .call-score-pill span { display: block; font-family: var(--font-sans); font-size: 26px; font-weight: 700; color: #8a6320; }
   .call-score-pill label { display: block; font-size: 14.5px; color: #5B5D63; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; margin-top: 4px; }
   .call-summary-cards { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
   .call-summary-card { flex: 1; min-width: 200px; background: #F7F6F2; border: 1px solid rgba(217,169,77,0.22); border-radius: 12px; padding: 16px 18px; }
@@ -448,11 +453,11 @@
   .call-checklist-q { font-size: 16px; color: #1E2024; font-weight: 500; }
   .call-checklist-a { font-size: 14.5px; color: #5B5D63; margin-top: 4px; }
   .call-score-list { display: flex; flex-direction: column; gap: 14px; }
-  .call-framework-group-title { font-size: 14.5px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; color: #b8862f; margin: 6px 0 -2px; }
+  .call-framework-group-title { font-size: 14.5px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; color: #8a6320; margin: 6px 0 -2px; }
   .call-score-row { background: #FFFFFF; border: 1px solid rgba(30,32,36,0.08); border-radius: 10px; padding: 13px 15px; }
   .call-score-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .call-score-label { font-size: 16px; font-weight: 600; color: #1E2024; }
-  .call-score-num { font-size: 16px; font-weight: 700; color: #b8862f; flex-shrink: 0; }
+  .call-score-num { font-size: 16px; font-weight: 700; color: #8a6320; flex-shrink: 0; }
   .call-score-bar { height: 6px; background: rgba(30,32,36,0.08); border-radius: 4px; margin-top: 8px; overflow: hidden; }
   .call-score-bar-fill { height: 100%; background: #d9a94d; border-radius: 4px; }
   .call-score-notes { margin-top: 10px; }
@@ -562,7 +567,10 @@
   <div class="toolbar">
     <select id="pipeline-select"></select>
     <button class="icon-btn" id="edit-pipeline-name-btn" title="Editar nome do pipeline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-    <input type="text" id="search-input-opp" placeholder="Buscar por nome, telefone ou escritório">
+    <div class="search-wrap">
+      <input type="text" id="search-input-opp" placeholder="Buscar por nome, telefone ou escritório">
+      <button type="button" class="search-clear" id="search-clear-opp" title="Limpar busca">&times;</button>
+    </div>
     <div class="filter-wrap">
       <button class="btn-outline btn-sm" id="filters-btn">Filtros</button>
       <div class="filter-panel" id="filter-panel">
@@ -621,7 +629,10 @@
 
 <div id="view-contacts" style="display:none;">
   <div class="toolbar">
-    <input type="text" id="search-input-contacts" placeholder="Buscar por nome, telefone ou escritório">
+    <div class="search-wrap">
+      <input type="text" id="search-input-contacts" placeholder="Buscar por nome, telefone ou escritório">
+      <button type="button" class="search-clear" id="search-clear-contacts" title="Limpar busca">&times;</button>
+    </div>
     <div class="filter-wrap">
       <button class="btn-outline btn-sm" id="contacts-filters-btn">Filtros</button>
       <div class="filter-panel" id="contacts-filter-panel">
@@ -1394,6 +1405,23 @@ function togglePassVisibility(inputId, btn){
 }
 document.querySelectorAll('.pass-eye svg').forEach(svg => { svg.innerHTML = EYE_ICON; });
 
+// "x" pra limpar um campo de busca: mostra so quando tem texto digitado,
+// limpa e dispara o mesmo callback do "input" ao clicar.
+function _wireSearchClear(inputId, clearBtnId, onChange){
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(clearBtnId);
+  if(!input || !clearBtn) return;
+  const sync = () => clearBtn.classList.toggle('show', !!input.value);
+  input.addEventListener('input', sync);
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    onChange('');
+    sync();
+    input.focus();
+  });
+  sync();
+}
+
 const _fbConfig = {
   apiKey: "AIzaSyBTqzj-9-AOI181sPCKvRsVGDujkWogIGI",
   authDomain: "flowbody-30162.firebaseapp.com",
@@ -1882,12 +1910,20 @@ function switchTab(tab){
 }
 
 function render(){
+  // reconstruir a lista/tabela pode encolher a pagina por uma fracao de
+  // segundo (ela e refeita do zero), e o navegador as vezes "prende" a
+  // rolagem no topo se isso acontecer enquanto voce ta rolado mais pra
+  // baixo. Guarda e restaura a posicao da pagina em volta do render pra
+  // abrir/editar/excluir um lead mais pra baixo na lista nao chutar a
+  // tela de volta pro topo.
+  const _prevPageScroll = window.scrollY;
   if(activeTab === 'opp') renderOpp();
   else if(activeTab === 'contacts') renderContacts();
   else if(activeTab === 'kpis') renderKpis();
   else if(activeTab === 'calls') renderCalls();
   else if(activeTab === 'flows') renderFlows();
   // 'approach' e conteudo estatico, nao precisa de render
+  if(window.scrollY !== _prevPageScroll) window.scrollTo(0, _prevPageScroll);
 }
 
 function formatDate(iso){
@@ -2003,6 +2039,16 @@ function renderOpp(){
   document.getElementById('board').style.display = 'flex';
 
   const board = document.getElementById('board');
+  // guarda a posicao de rolagem de antes de reconstruir tudo (o quadro
+  // inteiro e refeito do zero a cada render, o que sozinho zera a rolagem
+  // de cada coluna e do quadro horizontal -- sem isso, editar/excluir/so
+  // abrir um lead mais pra baixo "chuta" a tela de volta pro topo).
+  const _prevScrollLeft = board.scrollLeft;
+  const _prevColScrolls = {};
+  board.querySelectorAll('.col-body').forEach(cb => {
+    const colEl = cb.closest('.col');
+    if(colEl) _prevColScrolls[colEl.dataset.stageId] = cb.scrollTop;
+  });
   board.innerHTML = '';
 
   pipeline.stages.forEach(st => {
@@ -2066,6 +2112,14 @@ function renderOpp(){
     col.appendChild(body);
 
     board.appendChild(col);
+  });
+
+  // restaura a rolagem que tinha antes de reconstruir
+  board.scrollLeft = _prevScrollLeft;
+  board.querySelectorAll('.col-body').forEach(cb => {
+    const colEl = cb.closest('.col');
+    const prev = colEl && _prevColScrolls[colEl.dataset.stageId];
+    if(prev) cb.scrollTop = prev;
   });
 
   board.querySelectorAll('.col-del').forEach(btn => btn.addEventListener('click', () => deleteStage(btn.dataset.id)));
@@ -2425,6 +2479,8 @@ function bindStaticEvents(){
 
   document.getElementById('search-input-opp').addEventListener('input', (e) => { searchOpp = e.target.value; render(); });
   document.getElementById('search-input-contacts').addEventListener('input', (e) => { searchContacts = e.target.value; render(); });
+  _wireSearchClear('search-input-opp', 'search-clear-opp', (v) => { searchOpp = v; render(); });
+  _wireSearchClear('search-input-contacts', 'search-clear-contacts', (v) => { searchContacts = v; render(); });
 
   document.getElementById('new-lead-btn').addEventListener('click', () => openLeadModal(null, null, true));
   document.getElementById('new-contact-btn').addEventListener('click', () => openLeadModal(null, null, false));
@@ -3379,7 +3435,7 @@ async function renderFlows(){
   const flows = await DB.getFlows();
   const listEl = document.getElementById('flows-list');
   if(!flows.length){
-    listEl.innerHTML = '<div style="text-align:center;padding:56px 20px;color:#7A7C82;font-size:16px;">Nenhum fluxo criado ainda.<br>Clique em "Novo fluxo" pra montar o primeiro.</div>';
+    listEl.innerHTML = '<div style="text-align:center;padding:56px 20px;color:#686A70;font-size:16px;">Nenhum fluxo criado ainda.<br>Clique em "Novo fluxo" pra montar o primeiro.</div>';
     return;
   }
   listEl.innerHTML = flows.map(f => {
@@ -4653,7 +4709,7 @@ async function _resolveLoginEmail(email, errEl){
     await _fbInit();
   } catch(err){
     const code = (err && (err.code || err.message)) || 'desconhecido';
-    if(errEl) errEl.innerHTML = 'Não consegui conectar ao servidor.<br><span style="font-family:ui-monospace,monospace;font-size: 13.5px;color:#7c7e85;">Erro: '+escapeHtml(String(code))+'</span>';
+    if(errEl) errEl.innerHTML = 'Não consegui conectar ao servidor.<br><span style="font-family:ui-monospace,monospace;font-size: 14px;color:#94969c;">Erro: '+escapeHtml(String(code))+'</span>';
     return null;
   }
   const baseUser = findUserByAnyEmail(email);
