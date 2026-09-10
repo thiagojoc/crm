@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Envio de dados e documentos</title>
+<style>
+  :root { --gold: #d9a94d; --gold-dark: #8a6320; --bg: #0a0b0d; --card: #14161a; --field: #1c1f24; --text: #f5f3ee; --muted: #94969c; --danger: #d9614a; --ok: #3fae81; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  .card { width: 100%; max-width: 520px; background: var(--card); border: 1px solid rgba(217,169,77,0.2); border-radius: 16px; padding: 32px 28px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .brand-word { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  h1 { font-size: 20px; margin: 0 0 8px; font-weight: 700; }
+  .lead { font-size: 16px; color: var(--muted); line-height: 1.5; margin: 0 0 26px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+  .field input, .field textarea { width: 100%; background: var(--field); border: 1px solid rgba(217,169,77,0.2); border-radius: 8px; color: var(--text); padding: 11px 12px; font-size: 16px; font-family: inherit; }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--gold); }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .upload-zone { border: 2px dashed rgba(217,169,77,0.3); border-radius: 10px; padding: 22px 16px; text-align: center; cursor: pointer; color: var(--muted); font-size: 15px; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--gold); color: var(--text); background: rgba(217,169,77,0.05); }
+  .upload-zone svg { display: block; margin: 0 auto 10px; color: var(--gold); }
+  #file-input { display: none; }
+  .file-list { margin-top: 12px; }
+  .file-item { display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid rgba(217,169,77,0.15); border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 15px; }
+  .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item .file-size { color: var(--muted); font-size: 14px; flex-shrink: 0; }
+  .file-item button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; flex-shrink: 0; }
+  .file-item button:hover { color: var(--danger); }
+  .hint { font-size: 14px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  button[type=submit] { width: 100%; background: var(--gold); color: #0a0b0d; border: none; border-radius: 8px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+  button[type=submit]:disabled { opacity: .6; cursor: default; }
+  .msg { font-size: 15px; margin-top: 14px; line-height: 1.5; min-height: 0; }
+  .msg.error { color: var(--danger); }
+  .msg.progress { color: var(--muted); }
+  .done { text-align: center; padding: 20px 0; }
+  .done svg { color: var(--ok); margin-bottom: 16px; }
+  .done h1 { margin-bottom: 10px; }
+  .done p { color: var(--muted); font-size: 16px; line-height: 1.6; }
+  .invalid { text-align: center; padding: 30px 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div class="brand" id="brand">
+    <svg id="brand-default-logo" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="26" height="20">
+      <rect x="0" y="0" width="36" height="8" rx="2.5" fill="#d9a94d"></rect>
+      <rect x="0" y="10" width="24" height="8" rx="2.5" fill="#d9a94d"></rect>
+      <rect x="0" y="20" width="13" height="8" rx="2.5" fill="#d9a94d"></rect>
+    </svg>
+    <img id="brand-logo-img" alt="" style="display:none;max-height:44px;max-width:100%;">
+    <div class="brand-word" id="brand-word">FlowSales</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+const _fbConfig = {
+  apiKey: "AIzaSyBTqzj-9-AOI181sPCKvRsVGDujkWogIGI",
+  authDomain: "flowbody-30162.firebaseapp.com",
+  projectId: "flowbody-30162",
+  storageBucket: "flowbody-30162.firebasestorage.app",
+  messagingSenderId: "440511544358",
+  appId: "1:440511544358:web:00dc29d16295ed23f3fae7"
+};
+const _fbApp = initializeApp(_fbConfig);
+const _fbDB = getFirestore(_fbApp);
+const _fbAuth = getAuth(_fbApp);
+const _fbStorage = getStorage(_fbApp);
+
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB por arquivo, mesmo teto do resto do CRM
+
+function uid(prefix){ return (prefix||'x') + Date.now() + Math.floor(Math.random()*100000); }
+function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatBytes(n){
+  if(n < 1024) return n+' B';
+  if(n < 1024*1024) return (n/1024).toFixed(0)+' KB';
+  return (n/(1024*1024)).toFixed(1)+' MB';
+}
+
+// aplica a marca (logo + cores) do escritorio dono do lead, se ele tiver
+// configurado uma (ver "Personalizar marca da conta" no CRM) -- essa
+// leitura e publica de proposito (so nome/logo/cores, nada sensivel),
+// pra a pagina poder ficar com a cara do escritorio do lead antes mesmo
+// de qualquer autenticacao.
+async function applyBranding(workspaceId){
+  try {
+    const snap = await getDoc(doc(_fbDB, 'crm_sjc_public', workspaceId));
+    if(!snap.exists()) return;
+    const b = snap.data();
+    if(b.bgColor) document.documentElement.style.setProperty('--card', b.bgColor);
+    if(b.accentColor){
+      document.documentElement.style.setProperty('--gold', b.accentColor);
+      document.documentElement.style.setProperty('--gold-dark', b.accentColor);
+    }
+    if(b.logo){
+      document.getElementById('brand-default-logo').style.display = 'none';
+      document.getElementById('brand-word').style.display = 'none';
+      const img = document.getElementById('brand-logo-img');
+      img.src = b.logo;
+      img.style.display = 'block';
+    } else if(b.name){
+      document.getElementById('brand-word').textContent = b.name;
+    }
+  } catch(err){ console.error('[preencher] falha ao carregar marca:', err); }
+}
+
+const params = new URLSearchParams(location.search);
+const workspaceId = params.get('w');
+const contactId = params.get('c');
+const nomeParam = params.get('n') || '';
+if(workspaceId) applyBranding(workspaceId);
+const docsParam = (params.get('docs') || '').split('|').map(s => s.trim()).filter(Boolean);
+const content = document.getElementById('content');
+
+if(!workspaceId || !contactId){
+  content.innerHTML = '<div class="invalid">Esse link não é válido ou está incompleto. Peça pra quem te enviou conferir e mandar de novo.</div>';
+} else {
+  const docsHtml = docsParam.length
+    ? '<ul style="margin:0 0 18px;padding-left:20px;color:var(--text);font-size:15px;line-height:1.8;">'+docsParam.map(d => '<li>'+escapeHtml(d)+'</li>').join('')+'</ul>'
+    : '';
+  content.innerHTML = `
+    <h1>Envio de dados e documentos</h1>
+    <p class="lead">${nomeParam ? 'Olá, '+escapeHtml(nomeParam)+'! ' : ''}Preencha as informações abaixo${docsParam.length ? ' e anexe os documentos pedidos' : ''}. Assim que enviar, chega automaticamente pra quem está cuidando do seu atendimento.</p>
+    <form id="intake-form">
+      <div class="field"><label>Nome completo</label><input type="text" id="f-nome" value="${escapeHtml(nomeParam)}" required></div>
+      <div class="field-row">
+        <div class="field"><label>E-mail</label><input type="email" id="f-email"></div>
+        <div class="field"><label>Profissão</label><input type="text" id="f-profissao"></div>
+      </div>
+      <div class="field">
+        <label>Documentos</label>
+        ${docsHtml}
+        <div class="upload-zone" id="upload-zone">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Clique aqui ou arraste os arquivos (foto ou PDF)
+        </div>
+        <input type="file" id="file-input" multiple>
+        <div class="file-list" id="file-list"></div>
+        <div class="hint">Pode mandar tudo junto, em uma ou várias fotos/arquivos. Cada um até 20 MB.</div>
+      </div>
+      <button type="submit" id="submit-btn">Enviar</button>
+      <div class="msg" id="msg"></div>
+    </form>
+  `;
+
+  let selectedFiles = [];
+  const zone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('file-input');
+  const fileList = document.getElementById('file-list');
+  const msgEl = document.getElementById('msg');
+  const submitBtn = document.getElementById('submit-btn');
+
+  function renderFileList(){
+    fileList.innerHTML = selectedFiles.map((f, i) =>
+      '<div class="file-item"><span class="file-name">'+escapeHtml(f.name)+'</span><span class="file-size">'+formatBytes(f.size)+'</span><button type="button" data-remove="'+i+'" title="Remover">&times;</button></div>'
+    ).join('');
+    fileList.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => {
+      selectedFiles.splice(parseInt(btn.dataset.remove,10), 1);
+      renderFileList();
+    }));
+  }
+  function addFiles(fileArr){
+    msgEl.textContent = '';
+    msgEl.className = 'msg';
+    Array.from(fileArr).forEach(f => {
+      if(f.size > MAX_FILE_BYTES){
+        msgEl.textContent = 'O arquivo "'+f.name+'" passa de 20 MB e não foi adicionado.';
+        msgEl.className = 'msg error';
+        return;
+      }
+      selectedFiles.push(f);
+    });
+    renderFileList();
+  }
+  zone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    addFiles(e.dataTransfer.files);
+  });
+
+  document.getElementById('intake-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('f-nome').value.trim();
+    if(!nome){ msgEl.textContent = 'Informe seu nome.'; msgEl.className = 'msg error'; return; }
+    submitBtn.disabled = true;
+    msgEl.className = 'msg progress';
+    try {
+      msgEl.textContent = 'Conectando...';
+      if(!_fbAuth.currentUser) await signInAnonymously(_fbAuth);
+
+      const submissionId = uid('sub');
+      const files = [];
+      for(let i = 0; i < selectedFiles.length; i++){
+        const f = selectedFiles[i];
+        msgEl.textContent = 'Enviando arquivo '+(i+1)+' de '+selectedFiles.length+'...';
+        const path = 'crm_sjc_intake/'+workspaceId+'/'+contactId+'/'+submissionId+'/'+f.name;
+        const fileRef = ref(_fbStorage, path);
+        await uploadBytes(fileRef, f);
+        const url = await getDownloadURL(fileRef);
+        files.push({ name: f.name, url, size: f.size, contentType: f.type || '' });
+      }
+
+      msgEl.textContent = 'Finalizando...';
+      await setDoc(doc(_fbDB, 'crm_sjc_intake', submissionId), {
+        workspaceId, contactId,
+        submittedAt: new Date().toISOString(),
+        fields: {
+          nome,
+          email: document.getElementById('f-email').value.trim(),
+          profissao: document.getElementById('f-profissao').value.trim()
+        },
+        files
+      });
+
+      content.innerHTML = `
+        <div class="done">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+          <h1>Recebido!</h1>
+          <p>Seus dados${files.length ? ' e documentos' : ''} foram enviados. Obrigado.</p>
+        </div>
+      `;
+    } catch(err){
+      console.error('[preencher] falha ao enviar:', err);
+      msgEl.textContent = 'Não deu pra enviar agora. Verifique sua internet e tente de novo em instantes.';
+      msgEl.className = 'msg error';
+      submitBtn.disabled = false;
+    }
+  });
+}
+</script>
+</body>
+</html>
