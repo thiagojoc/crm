@@ -3008,16 +3008,21 @@ async function saveIntakeTemplateModal(){
 async function sendIntakeLink(contactId){
   const c = contactById(contactId);
   if(!c) return;
-  const tpl = await DB.getIntakeTemplate();
-  const code = await DB.createIntakeLink({
-    workspaceId: currentUser.activeWorkspace,
-    contactId: c.id,
-    nome: c.firstName || '',
-    documents: tpl.documents || []
-  });
-  const url = 'https://thiagojoc.github.io/crm/preencher.html?id=' + code;
-  const msg = tpl.message.replace(/\{\{nome\}\}/g, c.firstName || '').replace(/\{\{link\}\}/g, url);
-  window.open('https://wa.me/'+waLink(c)+'?text='+encodeURIComponent(msg), '_blank');
+  try {
+    const tpl = await DB.getIntakeTemplate();
+    const code = await DB.createIntakeLink({
+      workspaceId: currentUser.activeWorkspace,
+      contactId: c.id,
+      nome: c.firstName || '',
+      documents: tpl.documents || []
+    });
+    const url = 'https://thiagojoc.github.io/crm/preencher.html?id=' + code;
+    const msg = tpl.message.replace(/\{\{nome\}\}/g, c.firstName || '').replace(/\{\{link\}\}/g, url);
+    window.open('https://wa.me/'+waLink(c)+'?text='+encodeURIComponent(msg), '_blank');
+  } catch(err){
+    console.error('[CRM] falha ao gerar link de coleta de dados:', err);
+    alert('Não deu pra gerar o link agora. Tente de novo em instantes. Detalhe: ' + ((err && (err.code || err.message)) || 'desconhecido'));
+  }
 }
 async function switchWorkspace(workspaceId){
   if(!currentUser.workspaces || !currentUser.workspaces[workspaceId] || workspaceId === currentUser.activeWorkspace) return;
