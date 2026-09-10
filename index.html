@@ -292,7 +292,9 @@
   .field input[type=color] { width: 64px; height: 42px; padding: 4px; cursor: pointer; }
   .intake-sub { background: #1c1f24; border: 1px solid rgba(217,169,77,0.18); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
   .intake-sub-date { font-size: 13.5px; color: #94969c; margin-bottom: 6px; }
-  .intake-field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .intake-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; }
+  @media (max-width: 720px) { .intake-fields-grid { grid-template-columns: 1fr; } }
+  .intake-field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; min-width: 0; }
   .intake-field-label { font-size: 14px; color: #94969c; min-width: 78px; flex-shrink: 0; }
   .intake-field-value { font-size: 15px; color: #f5f3ee; flex: 1; word-break: break-word; }
   .intake-copy-btn { background: none; border: 1px solid rgba(217,169,77,0.3); border-radius: 6px; color: #d9a94d; font-size: 13px; padding: 3px 8px; cursor: pointer; flex-shrink: 0; }
@@ -980,7 +982,7 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
 </div>
 
 <div class="modal-bg" id="lead-modal-bg">
-  <div class="modal" style="width:900px;">
+  <div class="modal" style="width:1080px;">
     <h3 class="serif" id="lead-modal-title">Novo lead</h3>
     <input type="hidden" id="lead-id"><input type="hidden" id="lead-opp-id">
     <div class="lead-modal-cols">
@@ -1031,11 +1033,11 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
             <button type="button" class="btn-secondary" id="lead-touch-add-btn">+ Registrar contato</button>
           </div>
         </div>
-        <div class="field" id="lead-intake-info" style="display:none;">
-          <label>Documentos recebidos</label>
-          <div id="lead-intake-list"><div class="intake-empty">Carregando...</div></div>
-        </div>
       </div>
+    </div>
+    <div class="field" id="lead-intake-info" style="display:none;">
+      <label>Documentos recebidos</label>
+      <div id="lead-intake-list"><div class="intake-empty">Carregando...</div></div>
     </div>
     <div class="modal-actions">
       <button class="btn-danger" id="delete-lead-btn" style="display:none;">Excluir</button>
@@ -3304,7 +3306,7 @@ async function renderLeadIntakeList(contactId){
     ).join('');
     return '<div class="intake-sub">'
       + (dateStr ? '<div class="intake-sub-date">Recebido em '+escapeHtml(dateStr)+'</div>' : '')
-      + (fieldsHtml || '<div class="intake-empty">Sem dados preenchidos.</div>')
+      + (fieldsHtml ? '<div class="intake-fields-grid">'+fieldsHtml+'</div>' : '<div class="intake-empty">Sem dados preenchidos.</div>')
       + filesHtml
       + '</div>';
   }).join('');
