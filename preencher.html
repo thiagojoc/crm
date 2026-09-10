@@ -12,19 +12,25 @@
   .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
   .brand-word { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
   h1 { font-size: 20px; margin: 0 0 8px; font-weight: 700; }
-  .lead { font-size: 16px; color: var(--muted); line-height: 1.5; margin: 0 0 26px; }
+  .lead { font-size: 16px; color: var(--muted); line-height: 1.5; margin: 0 0 16px; }
+  .trust-badge { display: flex; align-items: center; gap: 10px; background: rgba(63,174,129,0.12); border: 1px solid rgba(63,174,129,0.3); border-radius: 8px; padding: 10px 14px; color: var(--ok); font-size: 14px; font-weight: 600; margin-bottom: 26px; }
+  .trust-badge svg { flex-shrink: 0; }
+  .section-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gold); margin: 22px 0 10px; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
-  .field input, .field textarea { width: 100%; background: var(--field); border: 1px solid rgba(217,169,77,0.2); border-radius: 8px; color: var(--text); padding: 11px 12px; font-size: 16px; font-family: inherit; }
+  .field input, .field select, .field textarea { width: 100%; background: var(--field); border: 1px solid rgba(217,169,77,0.2); border-radius: 8px; color: var(--text); padding: 11px 12px; font-size: 16px; font-family: inherit; }
+  .field select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394969c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
   .field textarea { min-height: 80px; resize: vertical; }
-  .field input:focus, .field textarea:focus { outline: none; border-color: var(--gold); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--gold); }
   .field-row { display: flex; gap: 12px; }
-  .field-row .field { flex: 1; }
-  .upload-zone { border: 2px dashed rgba(217,169,77,0.3); border-radius: 10px; padding: 22px 16px; text-align: center; cursor: pointer; color: var(--muted); font-size: 15px; }
+  .field-row .field { flex: 1; min-width: 0; }
+  .field .field-hint { font-size: 14px; color: var(--muted); margin-top: 6px; line-height: 1.4; min-height: 18px; }
+  .doc-block { margin-bottom: 20px; }
+  .upload-zone { border: 2px dashed rgba(217,169,77,0.3); border-radius: 10px; padding: 20px 16px; text-align: center; cursor: pointer; color: var(--muted); font-size: 15px; }
   .upload-zone:hover, .upload-zone.dragover { border-color: var(--gold); color: var(--text); background: rgba(217,169,77,0.05); }
-  .upload-zone svg { display: block; margin: 0 auto 10px; color: var(--gold); }
-  #file-input { display: none; }
-  .file-list { margin-top: 12px; }
+  .upload-zone svg { display: block; margin: 0 auto 8px; color: var(--gold); }
+  .doc-block input[type=file] { display: none; }
+  .file-list { margin-top: 10px; }
   .file-item { display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid rgba(217,169,77,0.15); border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 15px; }
   .file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-item .file-size { color: var(--muted); font-size: 14px; flex-shrink: 0; }
@@ -81,10 +87,40 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB por arquivo, mesmo teto do rest
 
 function uid(prefix){ return (prefix||'x') + Date.now() + Math.floor(Math.random()*100000); }
 function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function stripAccents(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function formatBytes(n){
   if(n < 1024) return n+' B';
   if(n < 1024*1024) return (n/1024).toFixed(0)+' KB';
   return (n/(1024*1024)).toFixed(1)+' MB';
+}
+
+// mascaras: aplicadas a cada tecla digitada, so pra jogar pontuacao/traco no
+// lugar certo enquanto a pessoa digita, sem validar CPF/RG de verdade.
+function onlyDigits(v){ return String(v||'').replace(/[^0-9]/g, ''); }
+function formatCPF(v){
+  const d = onlyDigits(v).slice(0, 11);
+  if(d.length > 9) return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+  if(d.length > 6) return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+  if(d.length > 3) return d.slice(0,3)+'.'+d.slice(3);
+  return d;
+}
+function formatCEP(v){
+  const d = onlyDigits(v).slice(0, 8);
+  if(d.length > 5) return d.slice(0,5)+'-'+d.slice(5);
+  return d;
+}
+function formatRG(v){
+  // formato tipo "MG-15.485-303": ate 2 letras (estado) + dash + digitos
+  // agrupados 2.3-3. Se a pessoa nao digitar letra nenhuma, fica so os
+  // digitos agrupados (sem o prefixo de estado).
+  const clean = String(v||'').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const letters = (clean.match(/^[A-Z]{0,2}/) || [''])[0];
+  const digits = clean.slice(letters.length).replace(/[^0-9]/g, '').slice(0, 8);
+  let out = letters;
+  if(digits) out += (letters ? '-' : '') + digits.slice(0,2);
+  if(digits.length > 2) out += '.'+digits.slice(2,5);
+  if(digits.length > 5) out += '-'+digits.slice(5,8);
+  return out;
 }
 
 // aplica a marca (logo + cores) do escritorio dono do lead, se ele tiver
@@ -122,54 +158,120 @@ if(workspaceId) applyBranding(workspaceId);
 const docsParam = (params.get('docs') || '').split('|').map(s => s.trim()).filter(Boolean);
 const content = document.getElementById('content');
 
+const ESTADO_CIVIL_OPTIONS = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
+
 if(!workspaceId || !contactId){
   content.innerHTML = '<div class="invalid">Esse link não é válido ou está incompleto. Peça pra quem te enviou conferir e mandar de novo.</div>';
 } else {
-  const docsHtml = docsParam.length
-    ? '<ul style="margin:0 0 18px;padding-left:20px;color:var(--text);font-size:15px;line-height:1.8;">'+docsParam.map(d => '<li>'+escapeHtml(d)+'</li>').join('')+'</ul>'
-    : '';
+  // indices (dentro de docsParam) de documentos que so fazem sentido se a
+  // pessoa for casada (ex.: certidao de casamento) -- ficam escondidos ate
+  // ela selecionar "Casado(a)" no estado civil.
+  const casamentoIdxs = docsParam.map((d, i) => stripAccents(d).toLowerCase().includes('casamento') ? i : -1).filter(i => i >= 0);
+
+  const docsHtml = docsParam.length ? '<div class="section-title">Documentos</div>' + docsParam.map((docName, i) => {
+    const hidden = casamentoIdxs.includes(i);
+    return '<div class="doc-block" id="doc-block-'+i+'"'+(hidden ? ' style="display:none;"' : '')+'>'
+      + '<div class="field" style="margin-bottom:8px;"><label>'+escapeHtml(docName)+'</label></div>'
+      + '<div class="upload-zone" id="upload-zone-'+i+'">'
+        + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+        + 'Clique aqui ou arraste o arquivo (foto ou PDF)'
+      + '</div>'
+      + '<input type="file" id="file-input-'+i+'" multiple>'
+      + '<div class="file-list" id="file-list-'+i+'"></div>'
+    + '</div>';
+  }).join('') + '<div class="hint" style="margin-top:-8px;margin-bottom:4px;">Pode mandar mais de uma foto por documento (ex.: frente e verso). Cada arquivo até 20 MB.</div>' : '';
+
   content.innerHTML = `
     <h1>Envio de dados e documentos</h1>
-    <p class="lead">${nomeParam ? 'Olá, '+escapeHtml(nomeParam)+'! ' : ''}Preencha as informações abaixo${docsParam.length ? ' e anexe os documentos pedidos' : ''}. Assim que enviar, chega automaticamente pra quem está cuidando do seu atendimento.</p>
+    <p class="lead">${nomeParam ? 'Olá, '+escapeHtml(nomeParam)+'! ' : ''}Preencha as informações abaixo${docsParam.length ? ' e anexe os documentos pedidos' : ''}. Assim que enviar, o nosso time já poderá iniciar a elaboração do contrato.</p>
+    <div class="trust-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Suas informações e documentos são confidenciais e protegidos.</span>
+    </div>
     <form id="intake-form">
       <div class="field"><label>Nome completo</label><input type="text" id="f-nome" value="${escapeHtml(nomeParam)}" required></div>
+      <div class="field-row">
+        <div class="field"><label>RG</label><input type="text" id="f-rg" placeholder="Ex.: MG-15.485-303" inputmode="text"></div>
+        <div class="field"><label>CPF</label><input type="text" id="f-cpf" placeholder="000.000.000-00" inputmode="numeric"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>CEP</label>
+          <input type="text" id="f-cep" placeholder="00000-000" inputmode="numeric">
+          <div class="field-hint" id="cep-hint"></div>
+        </div>
+        <div class="field"><label>Número</label><input type="text" id="f-numero" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label>Endereço</label><input type="text" id="f-endereco" placeholder="Rua, bairro, cidade - UF"></div>
       <div class="field-row">
         <div class="field"><label>E-mail</label><input type="email" id="f-email"></div>
         <div class="field"><label>Profissão</label><input type="text" id="f-profissao"></div>
       </div>
       <div class="field">
-        <label>Documentos</label>
-        ${docsHtml}
-        <div class="upload-zone" id="upload-zone">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Clique aqui ou arraste os arquivos (foto ou PDF)
-        </div>
-        <input type="file" id="file-input" multiple>
-        <div class="file-list" id="file-list"></div>
-        <div class="hint">Pode mandar tudo junto, em uma ou várias fotos/arquivos. Cada um até 20 MB.</div>
+        <label>Estado civil</label>
+        <select id="f-estado-civil">
+          <option value="">Selecione...</option>
+          ${ESTADO_CIVIL_OPTIONS.map(o => '<option value="'+escapeHtml(o)+'">'+escapeHtml(o)+'</option>').join('')}
+        </select>
       </div>
+      ${docsHtml}
       <button type="submit" id="submit-btn">Enviar</button>
       <div class="msg" id="msg"></div>
     </form>
   `;
 
-  let selectedFiles = [];
-  const zone = document.getElementById('upload-zone');
-  const fileInput = document.getElementById('file-input');
-  const fileList = document.getElementById('file-list');
   const msgEl = document.getElementById('msg');
   const submitBtn = document.getElementById('submit-btn');
 
-  function renderFileList(){
-    fileList.innerHTML = selectedFiles.map((f, i) =>
-      '<div class="file-item"><span class="file-name">'+escapeHtml(f.name)+'</span><span class="file-size">'+formatBytes(f.size)+'</span><button type="button" data-remove="'+i+'" title="Remover">&times;</button></div>'
+  document.getElementById('f-rg').addEventListener('input', (e) => { e.target.value = formatRG(e.target.value); });
+  document.getElementById('f-cpf').addEventListener('input', (e) => { e.target.value = formatCPF(e.target.value); });
+  document.getElementById('f-cep').addEventListener('input', (e) => {
+    e.target.value = formatCEP(e.target.value);
+    const digits = onlyDigits(e.target.value);
+    if(digits.length === 8) lookupCEP(digits);
+    else document.getElementById('cep-hint').textContent = '';
+  });
+
+  async function lookupCEP(cep){
+    const cepHint = document.getElementById('cep-hint');
+    cepHint.textContent = 'Buscando endereço...';
+    try {
+      const res = await fetch('https://viacep.com.br/ws/'+cep+'/json/');
+      const data = await res.json();
+      if(data.erro){ cepHint.textContent = 'CEP não encontrado, preencha o endereço manualmente.'; return; }
+      const cidadeUf = data.localidade && data.uf ? data.localidade+' - '+data.uf : (data.localidade || data.uf || '');
+      const parts = [data.logradouro, data.bairro, cidadeUf].filter(Boolean);
+      document.getElementById('f-endereco').value = parts.join(', ');
+      cepHint.textContent = '';
+      document.getElementById('f-numero').focus();
+    } catch(err){
+      console.error('[preencher] falha ao buscar CEP:', err);
+      cepHint.textContent = 'Não deu pra buscar o endereço agora, preencha manualmente.';
+    }
+  }
+
+  document.getElementById('f-estado-civil').addEventListener('change', (e) => {
+    const casado = e.target.value === 'Casado(a)';
+    casamentoIdxs.forEach(i => {
+      document.getElementById('doc-block-'+i).style.display = casado ? 'block' : 'none';
+      if(!casado){ selectedFilesByDoc[i] = []; renderDocFileList(i); }
+    });
+  });
+
+  // um array de arquivos selecionados por documento (mesma posicao de docsParam)
+  const selectedFilesByDoc = docsParam.map(() => []);
+
+  function renderDocFileList(i){
+    const listEl = document.getElementById('file-list-'+i);
+    listEl.innerHTML = selectedFilesByDoc[i].map((f, j) =>
+      '<div class="file-item"><span class="file-name">'+escapeHtml(f.name)+'</span><span class="file-size">'+formatBytes(f.size)+'</span><button type="button" data-remove="'+j+'" title="Remover">&times;</button></div>'
     ).join('');
-    fileList.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => {
-      selectedFiles.splice(parseInt(btn.dataset.remove,10), 1);
-      renderFileList();
+    listEl.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => {
+      selectedFilesByDoc[i].splice(parseInt(btn.dataset.remove, 10), 1);
+      renderDocFileList(i);
     }));
   }
-  function addFiles(fileArr){
+  function addDocFiles(i, fileArr){
     msgEl.textContent = '';
     msgEl.className = 'msg';
     Array.from(fileArr).forEach(f => {
@@ -178,18 +280,22 @@ if(!workspaceId || !contactId){
         msgEl.className = 'msg error';
         return;
       }
-      selectedFiles.push(f);
+      selectedFilesByDoc[i].push(f);
     });
-    renderFileList();
+    renderDocFileList(i);
   }
-  zone.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
-  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-  zone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    zone.classList.remove('dragover');
-    addFiles(e.dataTransfer.files);
+  docsParam.forEach((docName, i) => {
+    const zone = document.getElementById('upload-zone-'+i);
+    const fileInput = document.getElementById('file-input-'+i);
+    zone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => { addDocFiles(i, fileInput.files); fileInput.value = ''; });
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      addDocFiles(i, e.dataTransfer.files);
+    });
   });
 
   document.getElementById('intake-form').addEventListener('submit', async (e) => {
@@ -204,14 +310,21 @@ if(!workspaceId || !contactId){
 
       const submissionId = uid('sub');
       const files = [];
-      for(let i = 0; i < selectedFiles.length; i++){
-        const f = selectedFiles[i];
-        msgEl.textContent = 'Enviando arquivo '+(i+1)+' de '+selectedFiles.length+'...';
-        const path = 'crm_sjc_intake/'+workspaceId+'/'+contactId+'/'+submissionId+'/'+f.name;
-        const fileRef = ref(_fbStorage, path);
-        await uploadBytes(fileRef, f);
-        const url = await getDownloadURL(fileRef);
-        files.push({ name: f.name, url, size: f.size, contentType: f.type || '' });
+      const totalFiles = selectedFilesByDoc.reduce((sum, arr) => sum + arr.length, 0);
+      let uploaded = 0;
+      for(let i = 0; i < docsParam.length; i++){
+        const docName = docsParam[i];
+        const docSlug = stripAccents(docName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        for(const f of selectedFilesByDoc[i]){
+          uploaded++;
+          msgEl.textContent = 'Enviando arquivo '+uploaded+' de '+totalFiles+'...';
+          const safeName = (docSlug ? docSlug+'__' : '') + f.name;
+          const path = 'crm_sjc_intake/'+workspaceId+'/'+contactId+'/'+submissionId+'/'+safeName;
+          const fileRef = ref(_fbStorage, path);
+          await uploadBytes(fileRef, f);
+          const url = await getDownloadURL(fileRef);
+          files.push({ name: f.name, url, size: f.size, contentType: f.type || '', doc: docName });
+        }
       }
 
       msgEl.textContent = 'Finalizando...';
@@ -220,8 +333,14 @@ if(!workspaceId || !contactId){
         submittedAt: new Date().toISOString(),
         fields: {
           nome,
+          rg: document.getElementById('f-rg').value.trim(),
+          cpf: document.getElementById('f-cpf').value.trim(),
+          cep: document.getElementById('f-cep').value.trim(),
+          numero: document.getElementById('f-numero').value.trim(),
+          endereco: document.getElementById('f-endereco').value.trim(),
           email: document.getElementById('f-email').value.trim(),
-          profissao: document.getElementById('f-profissao').value.trim()
+          profissao: document.getElementById('f-profissao').value.trim(),
+          estadoCivil: document.getElementById('f-estado-civil').value
         },
         files
       });
