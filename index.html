@@ -1644,7 +1644,10 @@ function initCardDrag(card, opp){
             await DB.saveOpportunities(opportunities);
             render();
             _maybeAutoOpenSchedule(liveOpp.contactId, stageId, liveOpp.pipelineId);
-            _maybeTriggerStageFlow(liveOpp.contactId, liveOpp.pipelineId, stageId);
+            // etapa de "reuniao marcada": o disparo do fluxo fica por conta do
+            // Agendar (confirmSchedule), que roda so depois que data/hora/link
+            // existem de verdade. Fora dessa etapa, dispara na hora normal.
+            if(!_isMeetingScheduledStage(stageId, liveOpp.pipelineId)) _maybeTriggerStageFlow(liveOpp.contactId, liveOpp.pipelineId, stageId);
           }
         }
       } else {
@@ -1833,6 +1836,14 @@ function _isMeetingScheduledStage(stageId, pipelineId){
   if(!stage) return false;
   const norm = normalizeImportText(stage.label);
   return ['reuniao marcada', 'reuniao agendada', 'call marcada', 'call agendada'].some(x => norm.includes(x));
+}
+// acha, dentro de uma pipeline, a etapa que equivale a "reuniao marcada"
+// (mesmo criterio de _isMeetingScheduledStage, so que partindo da pipeline
+// em vez de uma etapa ja escolhida). Usado no Agendar pra mover o card
+// sozinho pra essa etapa quando o Thiago confirma data/hora.
+function _meetingStageForPipeline(pipeline){
+  if(!pipeline || !pipeline.stages) return null;
+  return pipeline.stages.find(s => ['reuniao marcada', 'reuniao agendada', 'call marcada', 'call agendada'].some(x => normalizeImportText(s.label).includes(x))) || null;
 }
 // abre o Agendar sozinho pro contato, mas so se ele ainda nao tiver um
 // agendamento futuro valido (senao ficaria perguntando toda hora).
@@ -3321,7 +3332,9 @@ async function applyBulkEdit(){
   selectedOppIds.clear();
   closeBulkModal();
   render();
-  stageChanges.forEach(c => _maybeTriggerStageFlow(c.contactId, c.pipelineId, c.stageId));
+  // mesma logica: etapa de "reuniao marcada" dispara pelo Agendar, nao aqui
+  // (edicao em massa nem abre o modal de agendar, entao nao ha data/hora ainda).
+  stageChanges.filter(c => !_isMeetingScheduledStage(c.stageId, c.pipelineId)).forEach(c => _maybeTriggerStageFlow(c.contactId, c.pipelineId, c.stageId));
 }
 
 function gcalDateFmt(d){ return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
@@ -3759,9 +3772,27 @@ async function confirmSchedule(){
     m1: cps.m1 <= now
   };
   await DB.saveContacts(contacts);
+  // move a(s) oportunidade(s) desse contato pra etapa de "reuniao marcada" em
+  // cada pipeline que tiver uma (normalmente so a SDR), e so' dispara o fluxo
+  // de confirmacao depois disso -- assim {{data}}/{{hora}}/{{link}} chegam
+  // preenchidos na mensagem, em vez de vazios como na mudanca de etapa crua
+  // (ver _isMeetingScheduledStage nos outros 3 lugares que mudam stageId).
+  const contactOpps = opportunities.filter(o => o.contactId === contactId);
+  const movedOpps = [];
+  for(const opp of contactOpps){
+    const meetingStage = _meetingStageForPipeline(pipelineById(opp.pipelineId));
+    if(!meetingStage) continue;
+    if(opp.stageId !== meetingStage.id){
+      opp.stageId = meetingStage.id;
+      opp.stageChangedAt = new Date().toISOString();
+    }
+    movedOpps.push({ pipelineId: opp.pipelineId, stageId: meetingStage.id });
+  }
+  if(movedOpps.length) await DB.saveOpportunities(opportunities);
   await _syncReminderScheduledMessages(c2, start, cps);
   document.getElementById('schedule-modal-bg').classList.remove('show');
   render();
+  movedOpps.forEach(m => _maybeTriggerStageFlow(contactId, m.pipelineId, m.stageId));
 }
 
 // agenda o envio automatico (pela ponte wa-crm-bridge) dos 4 momentos da
@@ -4362,7 +4393,7 @@ async function saveLead(){
     if(targetCol) targetCol.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     if(stageChangedForAutoSchedule){
       _maybeAutoOpenSchedule(contact.id, stageId, pipelineId);
-      _maybeTriggerStageFlow(contact.id, pipelineId, stageId);
+      if(!_isMeetingScheduledStage(stageId, pipelineId)) _maybeTriggerStageFlow(contact.id, pipelineId, stageId);
     }
     return;
   }
