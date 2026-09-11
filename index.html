@@ -292,7 +292,8 @@
   .field input[type=color] { width: 64px; height: 42px; padding: 4px; cursor: pointer; }
   .intake-sub { background: #1c1f24; border: 1px solid rgba(217,169,77,0.18); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
   .intake-sub-date { font-size: 13.5px; color: #94969c; margin-bottom: 6px; }
-  .intake-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; }
+  .intake-fields-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px 20px; }
+  @media (max-width: 980px) { .intake-fields-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 720px) { .intake-fields-grid { grid-template-columns: 1fr; } }
   .intake-field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; min-width: 0; }
   .intake-field-label { font-size: 14px; color: #94969c; min-width: 78px; flex-shrink: 0; }
@@ -982,7 +983,7 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
 </div>
 
 <div class="modal-bg" id="lead-modal-bg">
-  <div class="modal" style="width:1080px;">
+  <div class="modal" style="width:1320px;">
     <h3 class="serif" id="lead-modal-title">Novo lead</h3>
     <input type="hidden" id="lead-id"><input type="hidden" id="lead-opp-id">
     <div class="lead-modal-cols">
