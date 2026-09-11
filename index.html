@@ -3298,8 +3298,9 @@ async function renderLeadIntakeList(contactId){
       '<div class="intake-doc-group">'
       + '<div class="intake-doc-group-label">'+escapeHtml(docLabel)+'</div>'
       + filesByDoc[docLabel].map(f =>
-          '<div class="intake-file-row">'+FILE_LINK_ICON_SVG+'<a href="'+escapeHtml(f.url)+'" target="_blank" rel="noopener">'+escapeHtml(f.name)+'</a>'
+          '<div class="intake-file-row">'+FILE_LINK_ICON_SVG
           + (SIDE_LABELS[f.side] ? '<span class="intake-file-side">'+SIDE_LABELS[f.side]+'</span>' : '')
+          + '<a href="'+escapeHtml(f.url)+'" target="_blank" rel="noopener">'+escapeHtml(f.name)+'</a>'
           + '<a class="intake-download-btn" href="'+escapeHtml(cloudinaryDownloadUrl(f.url))+'" download title="Baixar">'+DOWNLOAD_ICON_SVG+'</a>'
           + '</div>'
         ).join('')
