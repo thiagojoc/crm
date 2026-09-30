@@ -374,6 +374,16 @@
   .filter-empty { font-size: 14.5px; color: #5c5e64; }
   .filter-tag-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
   .filter-tag-row .filter-check { flex: 1; min-width: 0; }
+  /* caixa seletora de tags: fica fechada por padrão, só mostra a lista de
+     tags (checkboxes) ao clicar, em vez de já vir tudo aberto ocupando
+     espaço no painel de filtros. */
+  .tag-select-box { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: #1c1e24; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; color: #f5f3ee; font-size: 15px; font-family: inherit; padding: 9px 11px; cursor: pointer; text-align: left; }
+  .tag-select-box:hover { border-color: rgba(217,169,77,0.4); }
+  .tag-select-box span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag-select-box .chev { flex-shrink: 0; color: #9a9da6; transition: transform .15s; }
+  .tag-select-box.open .chev { transform: rotate(180deg); }
+  .tag-select-dropdown { display: none; margin-top: 8px; max-height: 220px; overflow-y: auto; }
+  .tag-select-dropdown.show { display: block; }
   .tag-del-btn { background: none; border: none; color: #5c5e64; cursor: pointer; font-size: 16px; padding: 2px 4px; flex-shrink: 0; }
   .tag-del-btn:hover { color: #d9614a; }
 
@@ -597,7 +607,11 @@
       <div class="filter-panel" id="filter-panel">
         <div class="filter-group">
           <div class="filter-group-title">Tags</div>
-          <div id="filter-tags-list"></div>
+          <button type="button" class="tag-select-box" id="filter-tags-box">
+            <span id="filter-tags-box-label">Selecionar tags</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="tag-select-dropdown" id="filter-tags-list"></div>
         </div>
         <div class="filter-group">
           <div class="filter-group-title">Situação</div>
@@ -659,7 +673,11 @@
       <div class="filter-panel" id="contacts-filter-panel">
         <div class="filter-group">
           <div class="filter-group-title">Tags</div>
-          <div id="contacts-filter-tags-list"></div>
+          <button type="button" class="tag-select-box" id="contacts-filter-tags-box">
+            <span id="contacts-filter-tags-box-label">Selecionar tags</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="tag-select-dropdown" id="contacts-filter-tags-list"></div>
         </div>
         <div class="filter-group">
           <div class="filter-group-title">Criado em</div>
@@ -2128,6 +2146,15 @@ function renderKpis(){
   document.getElementById('stat-conversao').textContent = totalOpps ? Math.round((ganhasOpps/totalOpps)*100)+'%' : '0%';
 }
 
+// texto da caixa seletora de tags (fechada): "Selecionar tags" sem
+// nenhuma marcada, os nomes quando poucas, ou "nome1, nome2 +N" quando
+// muitas, pra não estourar a largura da caixa.
+function tagSelectBoxLabel(selectedSet){
+  if(!selectedSet.size) return 'Selecionar tags';
+  const names = Array.from(selectedSet).map(t => tagLabel(t));
+  return names.length <= 2 ? names.join(', ') : names.slice(0,2).join(', ') + ' +' + (names.length - 2);
+}
+
 function renderFilterPanel(allTags){
   const list = document.getElementById('filter-tags-list');
   if(!allTags.length){
@@ -2145,6 +2172,7 @@ function renderFilterPanel(allTags){
     }));
     list.querySelectorAll('.tag-del-btn').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); deleteTagEverywhere(btn.dataset.tag); }));
   }
+  document.getElementById('filter-tags-box-label').textContent = tagSelectBoxLabel(tagFilters);
   document.querySelectorAll('.outcome-check').forEach(chk => { chk.checked = outcomeFilters.has(chk.value); });
   document.getElementById('filter-date-from').value = dateFromFilter;
   document.getElementById('filter-date-to').value = dateToFilter;
@@ -2310,6 +2338,7 @@ function renderContactsFilterPanel(allTags){
     }));
     list.querySelectorAll('.tag-del-btn').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); deleteTagEverywhere(btn.dataset.tag); }));
   }
+  document.getElementById('contacts-filter-tags-box-label').textContent = tagSelectBoxLabel(contactsTagFilters);
   document.getElementById('contacts-filter-date-from').value = contactsDateFrom;
   document.getElementById('contacts-filter-date-to').value = contactsDateTo;
   const total = contactsTagFilters.size + (contactsDateFrom || contactsDateTo ? 1 : 0);
@@ -2582,6 +2611,17 @@ function bindStaticEvents(){
     e.stopPropagation();
     document.getElementById('contacts-filter-panel').classList.toggle('show');
   });
+  // caixa seletora de tags: clique abre/fecha a lista de checkboxes, que
+  // fica escondida por padrão em vez de ocupar espaço direto no painel.
+  const wireTagSelectBox = (boxId, dropdownId) => {
+    document.getElementById(boxId).addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById(boxId).classList.toggle('open');
+      document.getElementById(dropdownId).classList.toggle('show');
+    });
+  };
+  wireTagSelectBox('filter-tags-box', 'filter-tags-list');
+  wireTagSelectBox('contacts-filter-tags-box', 'contacts-filter-tags-list');
   document.getElementById('more-actions-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     document.getElementById('more-actions-panel').classList.toggle('show');
