@@ -1,0 +1,30 @@
+# sobe o Evolution API (ponte nao-oficial com o WhatsApp) e o relay (esse
+# projeto) juntos, na mesma rede, pra um apontar pro outro por nome de
+# servico em vez de IP. Confira a documentacao oficial do Evolution API
+# (https://doc.evolution-api.com) antes de usar: as variaveis de ambiente
+# dele mudam de versao pra versao, as daqui embaixo sao as minimas pra
+# subir uma instancia simples, sem banco externo.
+services:
+  evolution-api:
+    image: atendai/evolution-api:latest
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=troque-por-uma-chave-bem-dificil
+      - SERVER_URL=http://localhost:8080
+    volumes:
+      - evolution_instances:/evolution/instances
+
+  relay:
+    build: .
+    restart: always
+    env_file: .env
+    volumes:
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    # sem "ports" aqui de proposito: o evolution-api chama esse servico pelo
+    # nome ("relay", porta 3000) dentro da propria rede do compose, nao
+    # precisa expor essa porta pra internet.
+
+volumes:
+  evolution_instances:
