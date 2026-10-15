@@ -351,6 +351,22 @@
   .import-summary { font-size: 15px; color: #d9a94d; margin-top: 12px; font-weight: 700; }
   .import-toggle-text { text-align: center; margin-top: 12px; }
   .import-toggle-text button { background: none; border: none; color: #9a9da6; font-size: 14.5px; text-decoration: underline; cursor: pointer; padding: 0; }
+  .import-preview-list { max-height: 420px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .import-preview-card { border: 1px solid rgba(217,169,77,0.16); border-radius: 8px; padding: 12px 14px; }
+  .import-preview-card-title { font-size: 14.5px; font-weight: 700; color: #d9a94d; margin-bottom: 8px; }
+  .import-preview-field { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 14.5px; color: #f5f3ee; }
+  .import-preview-field-label { color: #9a9da6; flex-shrink: 0; }
+  .import-preview-field-label code { font-size: 12.5px; color: #6f7278; background: rgba(154,157,166,0.12); border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+  .import-preview-field-value { text-align: right; word-break: break-word; }
+  .import-preview-row-errors { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(217,97,74,0.3); color: #e2938a; font-size: 14px; }
+  .import-checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14.5px; color: #cfd2d8; }
+  .import-checkbox-row input { width: auto; }
+  .import-report-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; margin: 14px 0; }
+  .import-report-stat { background: rgba(217,169,77,0.08); border-radius: 8px; padding: 10px 12px; }
+  .import-report-stat b { display: block; font-size: 20px; color: #d9a94d; }
+  .import-report-stat span { font-size: 13.5px; color: #9a9da6; }
+  .import-report-errors { max-height: 220px; overflow-y: auto; border: 1px solid rgba(217,97,74,0.25); border-radius: 8px; padding: 10px 12px; font-size: 14.5px; color: #e2938a; }
+  .import-report-errors div { padding: 3px 0; }
   a.link { color: #d9a94d; text-decoration: none; }
   a.link:hover { text-decoration: underline; }
 
@@ -1091,6 +1107,30 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
   </div>
 </div>
 
+<div class="modal-bg" id="touch-modal-bg">
+  <div class="modal" style="width:380px;">
+    <h3 class="serif">Registrar contato</h3>
+    <input type="hidden" id="touch-contact-id">
+    <div class="field-row">
+      <div class="field"><label>Data</label><input type="date" id="touch-date"></div>
+      <div class="field"><label>Canal</label>
+        <select id="touch-channel">
+          <option value="mensagem">Mensagem</option>
+          <option value="ligacao">Ligação</option>
+          <option value="email">E-mail</option>
+          <option value="presencial">Presencial</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="import-error" id="touch-error" style="display:none;"></div>
+    <div class="modal-actions"><div></div><div class="right">
+      <button class="btn-secondary" id="touch-cancel-btn">Cancelar</button>
+      <button class="btn-primary" id="touch-confirm-btn">Registrar</button>
+    </div></div>
+  </div>
+</div>
+
 <div class="modal-bg" id="activities-modal-bg">
   <div class="modal" style="width:540px;">
     <h3 class="serif">Atividades</h3>
@@ -1126,35 +1166,44 @@ Quem costuma decidir sobre investir em marketing aí no escritório?</div>
 </div>
 
 <div class="modal-bg" id="import-modal-bg">
-  <div class="modal" style="width:620px;">
+  <div class="modal" style="width:720px;">
     <h3 class="serif">Importar leads</h3>
 
-    <div id="import-file-area">
-      <label class="import-dropzone" id="import-dropzone" for="import-file-input">
-        <svg class="import-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div>Clique pra escolher uma planilha, ou arraste ela aqui</div>
-        <div class="hint-block" style="margin-top:2px;">.xlsx, .xls ou .csv</div>
-        <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv">
-      </label>
-      <div id="import-filename-wrap"></div>
-      <div class="hint-block">
-        Cabeçalho esperado: <strong>Nome</strong>, <strong>Telefone</strong>, Pipeline, Etapa, Tags (as quatro últimas são opcionais).
-        Cada linha vira um lead, entrando direto na pipeline e etapa indicadas. Se a pipeline ou etapa da planilha não existir ainda no CRM, o lead entra na pipeline selecionada agora, na primeira etapa dela.
+    <div id="import-form-state">
+      <div id="import-file-area">
+        <label class="import-dropzone" id="import-dropzone" for="import-file-input">
+          <svg class="import-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div>Clique pra escolher uma planilha, ou arraste ela aqui</div>
+          <div class="hint-block" style="margin-top:2px;">.xlsx, .xls ou .csv</div>
+          <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv">
+        </label>
+        <div id="import-filename-wrap"></div>
+        <div class="hint-block">
+          Colunas reconhecidas (só Nome e Telefone são obrigatórias): <strong>Nome</strong>, <strong>Telefone</strong>,
+          Sobrenome, Empresa, E-mail, Instagram, Endereço, Criado em, Pipeline, Etapa, Situação da oportunidade, Tags
+          (separe por ponto e vírgula), Observação, Datas de contato (formato "AAAA-MM-DD|canal; AAAA-MM-DD|canal",
+          canais: mensagem, ligacao, email, presencial, outro).
+          Lead já existente (mesmo telefone) é atualizado em vez de duplicado; coluna ausente ou célula vazia nunca apaga valor que já existe.
+        </div>
+        <div class="import-toggle-text">
+          <button type="button" id="import-switch-text-btn">prefiro colar o texto manualmente</button>
+        </div>
       </div>
+
+      <div class="import-area" id="import-text-area" style="display:none;">
+        <textarea id="import-text" placeholder="Nome,Telefone,Empresa,E-mail&#10;Primeira linha com os títulos das colunas, uma linha por lead"></textarea>
+        <div class="hint-block">Mesmas colunas da planilha (primeira linha = cabeçalho), separadas por vírgula. Entram na pipeline selecionada, na primeira etapa, como "Aberto", se a planilha não indicar outra.</div>
+        <div class="import-toggle-text">
+          <button type="button" id="import-switch-file-btn">prefiro anexar uma planilha</button>
+        </div>
+      </div>
+
       <div class="import-error" id="import-error" style="display:none;"></div>
       <div id="import-preview-area"></div>
-      <div class="import-toggle-text">
-        <button type="button" id="import-switch-text-btn">prefiro colar o texto manualmente</button>
-      </div>
+      <label class="import-checkbox-row"><input type="checkbox" id="import-overwrite-stage"> Sobrescrever etapa de leads já existentes</label>
     </div>
 
-    <div class="import-area" id="import-text-area" style="display:none;">
-      <textarea id="import-text" placeholder="Nome, Telefone, Escritorio, Email&#10;Um lead por linha"></textarea>
-      <div class="hint-block">Uma linha por lead: nome, telefone, escritório (opcional), e-mail (opcional). Entram na pipeline selecionada, na primeira etapa, como "Aberto".</div>
-      <div class="import-toggle-text">
-        <button type="button" id="import-switch-file-btn">prefiro anexar uma planilha</button>
-      </div>
-    </div>
+    <div id="import-report-state" style="display:none;"></div>
 
     <div class="modal-actions"><div></div><div class="right">
       <button class="btn-secondary" id="cancel-import-btn">Cancelar</button>
@@ -1623,6 +1672,22 @@ function waNumberFromPhone(phone){
   if(!d.startsWith('55')) d = '55' + d;
   return d;
 }
+// chave de comparacao usada SO pra achar lead duplicado na importacao (nao
+// mexe no telefone/waNumber salvo no contato, que continua vindo de
+// waNumberFromPhone). Alem do +55 implicito, canoniza o nono digito do
+// celular: numero com DDD(2) + local de 8 digitos comecando em 6/7/8/9 e
+// claramente celular sem o nono digito, entao ele entra pra bater com quem
+// ja digitou o mesmo numero com os 9 digitos.
+function normalizePhoneKey(raw){
+  let d = digitsOnly(raw);
+  if(!d) return '';
+  if(!d.startsWith('55')) d = '55' + d;
+  const rest = d.slice(2);
+  if(rest.length === 10 && ['6','7','8','9'].includes(rest[2])){
+    return '55' + rest.slice(0,2) + '9' + rest.slice(2);
+  }
+  return '55' + rest;
+}
 function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function tagClass(tag){ if(tag==='alta') return 'tag-alta'; if(tag==='media') return 'tag-media'; if(tag==='baixa') return 'tag-baixa'; return 'tag-default'; }
 const TAG_LABELS = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
@@ -1648,12 +1713,20 @@ function scheduleBadgeHtml(c){
   if(!info) return '';
   return '<div class="schedule-badge' + (info.past ? ' past' : '') + '">' + CALENDAR_ICON_SVG + '<span>' + escapeHtml(info.text) + '</span></div>';
 }
-// pontos de contato: cada atividade (ligacao, whatsapp, reuniao, interacao...)
-// registrada com esse contactId conta como um toque no lead. Reaproveita o
-// registro de atividades que ja existe (usado pros KPIs), so soma por contato.
+// ponto de contato = um contato por CANAL por DIA (nao por mensagem trocada).
+// Fica guardado como uma atividade do tipo 'touchpoint', com date (AAAA-MM-DD)
+// e channel proprios, separado dos outros tipos de atividade (call, whatsapp,
+// meeting etc.) que alimentam os KPIs e nao devem contar aqui.
+const TOUCHPOINT_CHANNELS = { mensagem: 'Mensagem', ligacao: 'Ligação', email: 'E-mail', presencial: 'Presencial', outro: 'Outro' };
 function contactTouchpointCount(contactId){
   if(!contactId) return 0;
-  return activities.filter(a => a.contactId === contactId).length;
+  return activities.filter(a => a.type === 'touchpoint' && a.contactId === contactId).length;
+}
+// chave de deduplicacao: lead + data + canal. Usada tanto no registro manual
+// quanto na importacao, pra nao inflar o historico com o mesmo contato
+// registrado duas vezes no mesmo dia.
+function hasTouchpoint(contactId, date, channel){
+  return activities.some(a => a.type === 'touchpoint' && a.contactId === contactId && a.date === date && a.channel === channel);
 }
 function touchpointBadgeHtml(contactId){
   const n = contactTouchpointCount(contactId);
@@ -2697,6 +2770,11 @@ function bindStaticEvents(){
   });
   document.getElementById('import-switch-text-btn').addEventListener('click', () => switchImportMode('text'));
   document.getElementById('import-switch-file-btn').addEventListener('click', () => switchImportMode('file'));
+  let _importTextDebounce = null;
+  document.getElementById('import-text').addEventListener('input', () => {
+    clearTimeout(_importTextDebounce);
+    _importTextDebounce = setTimeout(parseImportTextArea, 300);
+  });
 
   document.getElementById('wa-template-btn').addEventListener('click', async () => {
     document.getElementById('wa-template-text').value = await DB.getWaTemplate();
@@ -2861,11 +2939,30 @@ function bindStaticEvents(){
     const id = document.getElementById('lead-id').value;
     if(id) openScheduleModal(id);
   });
-  document.getElementById('lead-touch-add-btn').addEventListener('click', async () => {
+  document.getElementById('lead-touch-add-btn').addEventListener('click', () => {
     const contactId = document.getElementById('lead-id').value;
     if(!contactId) return;
-    activities.push({ id: uid('act'), type: 'interacao', contactId, oppId: null, createdAt: new Date().toISOString(), by: currentUser ? currentUser.baseEmail : '', manual: true });
+    document.getElementById('touch-contact-id').value = contactId;
+    document.getElementById('touch-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('touch-channel').value = 'mensagem';
+    document.getElementById('touch-error').style.display = 'none';
+    document.getElementById('touch-modal-bg').classList.add('show');
+  });
+  document.getElementById('touch-cancel-btn').addEventListener('click', () => document.getElementById('touch-modal-bg').classList.remove('show'));
+  document.getElementById('touch-confirm-btn').addEventListener('click', async () => {
+    const contactId = document.getElementById('touch-contact-id').value;
+    const date = document.getElementById('touch-date').value;
+    const channel = document.getElementById('touch-channel').value;
+    const errEl = document.getElementById('touch-error');
+    if(!contactId || !date){ errEl.textContent = 'Informe a data.'; errEl.style.display = 'block'; return; }
+    if(hasTouchpoint(contactId, date, channel)){
+      errEl.textContent = 'Já existe um ponto de contato desse canal nessa data pra esse lead.';
+      errEl.style.display = 'block';
+      return;
+    }
+    activities.push({ id: uid('act'), type: 'touchpoint', contactId, oppId: null, date, channel, createdAt: new Date(date+'T12:00:00').toISOString(), by: currentUser ? currentUser.baseEmail : '', manual: true });
     await DB.saveActivities(activities);
+    document.getElementById('touch-modal-bg').classList.remove('show');
     renderLeadTouchBadge(contactId);
     render();
   });
@@ -4295,8 +4392,8 @@ function renderCallsList(){
     return `<tr class="call-row" data-id="${call.id}">
       <td>${escapeHtml(dateStr)}</td>
       <td>${callText(call.leadName)}</td>
-      <td>${overall !== null ? overall : '—'}</td>
-      <td>${buyProb !== null ? buyProb + '%' : '—'}</td>
+      <td>${overall !== null ? overall : '-'}</td>
+      <td>${buyProb !== null ? buyProb + '%' : '-'}</td>
     </tr>`;
   }).join('');
   tbody.querySelectorAll('.call-row').forEach(tr => {
@@ -4338,8 +4435,8 @@ function renderCallDetail(call){
       <div class="call-detail-meta">${dateStr ? escapeHtml(dateStr) : 'Data não informada'}${closer && closer.nome ? ' · Closer: ' + escapeHtml(closer.nome) : ''}</div>
     </div>
     <div class="call-detail-scores">
-      <div class="call-score-pill"><span>${overall !== null ? overall : '—'}</span><label>Nota da call</label></div>
-      ${closer ? `<div class="call-score-pill"><span>${closerNota !== null ? closerNota : '—'}</span><label>Nota do closer</label></div>` : ''}
+      <div class="call-score-pill"><span>${overall !== null ? overall : '-'}</span><label>Nota da call</label></div>
+      ${closer ? `<div class="call-score-pill"><span>${closerNota !== null ? closerNota : '-'}</span><label>Nota do closer</label></div>` : ''}
     </div>
   </div>`;
 
@@ -4558,7 +4655,7 @@ async function finalizeCallImport(parsed, contactId){
 }
 
 // ---- atividades: registro manual + gerenciamento (pra corrigir cliques de teste) --
-const ACT_TYPE_LABEL = { call: 'Ligação', whatsapp: 'WhatsApp', meeting: 'Reunião agendada', abordado: 'Lead abordado', interacao: 'Interação', ganho: 'Venda ganha' };
+const ACT_TYPE_LABEL = { call: 'Ligação', whatsapp: 'WhatsApp', meeting: 'Reunião agendada', abordado: 'Lead abordado', interacao: 'Interação', ganho: 'Venda ganha', touchpoint: 'Ponto de contato' };
 
 function openActivitiesModal(){
   const contactSel = document.getElementById('act-new-contact');
@@ -4736,20 +4833,34 @@ function exportCsv(){
   URL.revokeObjectURL(url);
 }
 
-// ---- importar leads de planilha (.xlsx, .xls, .csv) ------------------------
-let _importMode = 'file'; // 'file' ou 'text' (o antigo modo de colar texto)
-let _importRows = []; // linhas ja lidas da planilha, prontas pra conferir e importar
+// ---- importar leads de planilha (.xlsx, .xls, .csv) ou texto colado --------
+// os dois modos (arquivo e texto) convergem pro mesmo pipeline: o texto
+// colado e interpretado como CSV (XLSX.read com type:'string'), vira as
+// mesmas linhas {header: valor} que o arquivo, e dali em diante e tudo
+// a mesma logica (processImportRows -> preview -> runImport).
+let _importMode = 'file'; // 'file' ou 'text'
+let _importRows = []; // linhas ja lidas, prontas pra conferir e importar
+let _importShowingReport = false;
 
 function normalizeImportText(str){
-  return String(str||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return String(str||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 const IMPORT_FIELD_ALIASES = {
   nome: ['nome', 'nome completo', 'lead', 'contato', 'cliente'],
+  sobrenome: ['sobrenome', 'ultimo nome', 'last name'],
   telefone: ['telefone', 'celular', 'whatsapp', 'fone', 'numero', 'numero de telefone'],
+  empresa: ['empresa', 'escritorio', 'office', 'company'],
+  email: ['email', 'e-mail', 'correio eletronico'],
+  instagram: ['instagram', 'insta'],
+  endereco: ['endereco', 'address'],
+  criadoem: ['criado em', 'data de criacao', 'criado', 'data criacao', 'data de cadastro'],
   pipeline: ['pipeline', 'funil'],
   etapa: ['etapa', 'estagio', 'stage', 'fase', 'coluna'],
-  tags: ['tags', 'tag', 'etiquetas', 'etiqueta']
+  situacao: ['situacao da oportunidade', 'situacao', 'outcome', 'status'],
+  tags: ['tags', 'tag', 'etiquetas', 'etiqueta'],
+  observacao: ['observacao', 'obs', 'nota', 'note', 'anotacao'],
+  datascontato: ['datas de contato', 'datas contato', 'pontos de contato', 'contatos']
 };
 
 function matchImportField(header){
@@ -4770,10 +4881,44 @@ function findStageByName(pipeline, name){
   const norm = normalizeImportText(name);
   return pipeline.stages.find(s => normalizeImportText(s.label) === norm) || null;
 }
+// acha a etapa em QUALQUER pipeline (nao so na indicada), pra avisar
+// especificamente quando a etapa da planilha existe mas e de outro funil
+// (ex.: etapa do Closer com pipeline SDR na mesma linha).
+function findStageInAnyPipeline(name){
+  if(!name) return null;
+  const norm = normalizeImportText(name);
+  for(const p of pipelines){
+    const st = p.stages.find(s => normalizeImportText(s.label) === norm);
+    if(st) return { pipeline: p, stage: st };
+  }
+  return null;
+}
+// resolve pipeline/etapa da importacao. fallbackPipeline so e usado quando a
+// planilha nao trouxe pipeline (faz sentido pra lead novo, que precisa
+// entrar em algum lugar); numa atualizacao sem essas colunas o chamador
+// passa null e simplesmente nao mexe no funil do lead (ver runImport).
+function resolvePipelineStage(pipelineRaw, etapaRaw, fallbackPipeline){
+  const errors = [];
+  const pipeline = findPipelineByName(pipelineRaw) || fallbackPipeline || null;
+  if(pipelineRaw && !findPipelineByName(pipelineRaw)){
+    errors.push('Pipeline "'+pipelineRaw+'" não encontrada, usando "'+(pipeline ? pipeline.name : 'nenhuma')+'".');
+  }
+  const stage = pipeline ? (findStageByName(pipeline, etapaRaw) || pipeline.stages[0]) : null;
+  if(etapaRaw && pipeline && !findStageByName(pipeline, etapaRaw)){
+    const elsewhere = findStageInAnyPipeline(etapaRaw);
+    if(elsewhere && elsewhere.pipeline.id !== pipeline.id){
+      errors.push('Etapa "'+etapaRaw+'" pertence à pipeline "'+elsewhere.pipeline.name+'", não à "'+pipeline.name+'". Lead entrou na primeira etapa de "'+pipeline.name+'".');
+    } else {
+      errors.push('Etapa "'+etapaRaw+'" não encontrada, usando a primeira etapa de "'+pipeline.name+'".');
+    }
+  }
+  return { pipeline, stage, errors };
+}
 
 // tags de prioridade (alta/media/baixa) entram no formato canonico usado no
 // resto do CRM, sem acento e minusculo, pra herdar cor e rotulo certos;
-// qualquer outra tag da planilha entra do jeito que foi escrita.
+// qualquer outra tag da planilha entra do jeito que foi escrita. Separador e
+// so ponto e virgula: virgula e o proprio separador de coluna do CSV.
 function normalizeTagValue(raw){
   const trimmed = String(raw||'').trim();
   if(!trimmed) return null;
@@ -4782,12 +4927,93 @@ function normalizeTagValue(raw){
   return trimmed;
 }
 function parseTagsCell(str){
-  return String(str||'').split(/[,;]+/).map(normalizeTagValue).filter(Boolean);
+  return String(str||'').split(/;+/).map(normalizeTagValue).filter(Boolean);
 }
 function dedupeTags(list){
   const seen = new Set(); const out = [];
   list.forEach(t => { const k = t.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(t); } });
   return out;
+}
+// reimportacao soma tags novas as que o lead ja tem, nunca substitui.
+function mergeTags(existing, incoming){
+  return dedupeTags((existing||[]).concat(incoming||[]));
+}
+
+function todayDateStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// aceita AAAA-MM-DD ou DD/MM/AAAA, valida que e uma data real (rejeita
+// 30/02 etc, em vez de deixar o Date "estourar" pro mes seguinte sem avisar).
+// retorna null se vazio ou invalido.
+function parseImportDate(raw){
+  const s = String(raw||'').trim();
+  if(!s) return null;
+  let y, mo, d;
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else {
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(m){ d = +m[1]; mo = +m[2]; y = +m[3]; }
+    else return null;
+  }
+  if(mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, mo-1, d);
+  if(dt.getFullYear() !== y || dt.getMonth() !== mo-1 || dt.getDate() !== d) return null;
+  return y + '-' + String(mo).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+// aceita Aberto/Ganho/Perdido sem diferenciar maiuscula/acento. Vazio ou
+// nao reconhecido volta "aberto" (valid:false so pro nao-reconhecido, pra
+// quem usa poder avisar na linha sem travar a importacao).
+function parseOutcome(raw){
+  const s = String(raw||'').trim();
+  if(!s) return { value: 'aberto', valid: true };
+  const norm = normalizeImportText(s);
+  if(norm === 'aberto' || norm === 'ganho' || norm === 'perdido') return { value: norm, valid: true };
+  return { value: 'aberto', valid: false };
+}
+// "AAAA-MM-DD|canal; AAAA-MM-DD|canal" -> pares validos + motivo de erro dos
+// pares invalidos (um par ruim nao derruba os outros da mesma celula).
+function parseTouchpointsCell(raw){
+  const pairs = [], errors = [];
+  String(raw||'').split(';').map(p => p.trim()).filter(Boolean).forEach(pair => {
+    const parts = pair.split('|').map(p => p.trim());
+    const dateRaw = parts[0] || '';
+    const channelRaw = normalizeImportText(parts[1] || '');
+    const date = parseImportDate(dateRaw);
+    if(!date){ errors.push('data de contato inválida: "'+dateRaw+'"'); return; }
+    if(!TOUCHPOINT_CHANNELS[channelRaw]){ errors.push('canal de contato inválido: "'+(parts[1]||'')+'"'); return; }
+    pairs.push({ date, channel: channelRaw });
+  });
+  return { pairs, errors };
+}
+
+// o XLSX (cellDates:true) entrega data de verdade como objeto Date, nao como
+// numero serial do Excel; formata pro mesmo AAAA-MM-DD que parseImportDate
+// aceita, em vez de deixar o Date virar texto cru (tipo "Tue Sep 01 2026...").
+function cellToString(val){
+  if(val instanceof Date){
+    return val.getFullYear() + '-' + String(val.getMonth()+1).padStart(2,'0') + '-' + String(val.getDate()).padStart(2,'0');
+  }
+  return String(val ?? '').trim();
+}
+
+function requiredFieldErrors(r){
+  const errs = [];
+  if(!r.nome.trim()) errs.push('Nome obrigatório ausente.');
+  if(digitsOnly(r.telefone).length < 8) errs.push('Telefone obrigatório ausente ou inválido.');
+  return errs;
+}
+// mapa telefone normalizado -> contato existente, pra decidir create vs
+// update (upsert). So o primeiro contato com aquela chave entra (nao deveria
+// haver dois no mesmo workspace com o mesmo telefone).
+function buildExistingPhoneMap(){
+  const map = new Map();
+  contacts.forEach(c => {
+    const k = normalizePhoneKey(c.phone || c.waNumber);
+    if(k && !map.has(k)) map.set(k, c);
+  });
+  return map;
 }
 
 function showImportError(msg){
@@ -4804,27 +5030,44 @@ function processImportRows(rows){
   headers.forEach(h => { const f = matchImportField(h); if(f && !Object.values(fieldByHeader).includes(f)) fieldByHeader[h] = f; });
 
   if(!Object.values(fieldByHeader).includes('nome')){
-    showImportError('Não encontrei uma coluna de Nome no cabeçalho da planilha. Confira se a primeira linha tem os títulos das colunas.');
+    showImportError('Não encontrei uma coluna de Nome no cabeçalho. Confira se a primeira linha tem os títulos das colunas.');
+    return;
+  }
+  if(!Object.values(fieldByHeader).includes('telefone')){
+    showImportError('Não encontrei uma coluna de Telefone no cabeçalho. Ela é obrigatória: é o que identifica o lead pra não duplicar.');
     return;
   }
 
-  _importRows = rows.map(row => {
-    const rec = { nome: '', telefone: '', pipelineRaw: '', etapaRaw: '', tagsRaw: '' };
+  _importRows = rows.map((row, idx) => {
+    const rec = {
+      line: idx + 2, // linha 1 e o cabecalho
+      nome: '', sobrenome: '', telefone: '', empresa: '', email: '', instagram: '', endereco: '',
+      criadoemRaw: '', pipelineRaw: '', etapaRaw: '', situacaoRaw: '', tagsRaw: '', observacao: '', datasContatoRaw: ''
+    };
     headers.forEach(h => {
       const field = fieldByHeader[h];
       if(!field) return;
-      const val = String(row[h] ?? '').trim();
+      const val = cellToString(row[h]);
       if(field === 'nome') rec.nome = val;
+      else if(field === 'sobrenome') rec.sobrenome = val;
       else if(field === 'telefone') rec.telefone = val;
+      else if(field === 'empresa') rec.empresa = val;
+      else if(field === 'email') rec.email = val;
+      else if(field === 'instagram') rec.instagram = val;
+      else if(field === 'endereco') rec.endereco = val;
+      else if(field === 'criadoem') rec.criadoemRaw = val;
       else if(field === 'pipeline') rec.pipelineRaw = val;
       else if(field === 'etapa') rec.etapaRaw = val;
+      else if(field === 'situacao') rec.situacaoRaw = val;
       else if(field === 'tags') rec.tagsRaw = val;
+      else if(field === 'observacao') rec.observacao = val;
+      else if(field === 'datascontato') rec.datasContatoRaw = val;
     });
     return rec;
-  }).filter(r => r.nome);
+  });
 
   if(!_importRows.length){
-    showImportError('Nenhuma linha com o campo Nome preenchido foi encontrada.');
+    showImportError('Nenhuma linha encontrada.');
     return;
   }
 
@@ -4850,7 +5093,7 @@ function handleImportFile(file){
   reader.onload = (e) => {
     try {
       const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: 'array' });
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
       processImportRows(rows);
@@ -4863,40 +5106,97 @@ function handleImportFile(file){
   reader.readAsArrayBuffer(file);
 }
 
+// modo "colar texto": interpreta o texto colado como CSV de verdade (usa o
+// mesmo parser da planilha, so que a partir de uma string em vez de um
+// arquivo), entao cai na mesma processImportRows/preview/report de sempre.
+function parseImportTextArea(){
+  document.getElementById('import-error').style.display = 'none';
+  const text = document.getElementById('import-text').value;
+  if(!text.trim()){
+    _importRows = [];
+    document.getElementById('import-preview-area').innerHTML = '';
+    document.getElementById('confirm-import-btn').disabled = true;
+    return;
+  }
+  try {
+    const wb = XLSX.read(text, { type: 'string', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    processImportRows(rows);
+  } catch(err){
+    console.error('[CRM] falha ao ler texto colado:', err);
+    showImportError('Não consegui interpretar esse texto. Confira se a primeira linha tem os títulos das colunas, separados por vírgula.');
+  }
+}
+
 function renderImportPreview(){
+  const existingByPhone = buildExistingPhoneMap();
   const fallbackPipeline = pipelineById(currentPipelineId);
-  const rowsHtml = _importRows.slice(0, 12).map(r => {
-    const targetPipeline = findPipelineByName(r.pipelineRaw) || fallbackPipeline;
-    const targetStage = findStageByName(targetPipeline, r.etapaRaw) || (targetPipeline ? targetPipeline.stages[0] : null);
-    const pipelineFallback = r.pipelineRaw && !findPipelineByName(r.pipelineRaw);
-    const stageFallback = r.etapaRaw && !findStageByName(targetPipeline, r.etapaRaw);
-    return '<tr>' +
-      '<td>' + escapeHtml(r.nome) + '</td>' +
-      '<td>' + escapeHtml(r.telefone) + '</td>' +
-      '<td class="' + (pipelineFallback ? 'import-fallback' : '') + '">' + escapeHtml(targetPipeline ? targetPipeline.name : 'nenhuma pipeline disponível') + '</td>' +
-      '<td class="' + (stageFallback ? 'import-fallback' : '') + '">' + escapeHtml(targetStage ? targetStage.label : 'nenhuma etapa disponível') + '</td>' +
-      '<td>' + escapeHtml(r.tagsRaw) + '</td>' +
-    '</tr>';
+  const OUTCOME_LABEL = { aberto: 'Aberto', ganho: 'Ganho', perdido: 'Perdido' };
+
+  const cardsHtml = _importRows.slice(0, 5).map(r => {
+    const reqErrors = requiredFieldErrors(r);
+    const phoneKey = normalizePhoneKey(r.telefone);
+    const existing = phoneKey ? existingByPhone.get(phoneKey) : null;
+    const situacaoInfo = parseOutcome(r.situacaoRaw);
+    const resolved = resolvePipelineStage(r.pipelineRaw, r.etapaRaw, existing ? null : fallbackPipeline);
+    const tags = dedupeTags(parseTagsCell(r.tagsRaw));
+    const touch = parseTouchpointsCell(r.datasContatoRaw);
+    const criadoEm = parseImportDate(r.criadoemRaw);
+
+    const fields = [
+      ['Nome', '#lead-first', r.nome || '-'],
+      ['Sobrenome', '#lead-last', r.sobrenome || '-'],
+      ['Empresa', '#lead-office', r.empresa || '-'],
+      ['E-mail', '#lead-email', r.email || '-'],
+      ['Telefone', '#lead-phone', r.telefone ? maskPhoneBR(r.telefone) : '-'],
+      ['Instagram', '#lead-instagram', r.instagram || '-'],
+      ['Endereço', '#lead-address', r.endereco || '-'],
+      ['Criado em', '#lead-created-at', existing ? (criadoEm || '(mantém a data atual)') : (criadoEm || todayDateStr() + ' (hoje, padrão)')],
+      ['Pipeline', '#lead-pipeline', resolved.pipeline ? resolved.pipeline.name : (existing ? '(não altera)' : '-')],
+      ['Etapa', '#lead-stage', resolved.stage ? resolved.stage.label : (existing ? '(não altera)' : '-')],
+      ['Situação', '#lead-outcome', OUTCOME_LABEL[situacaoInfo.value]],
+      ['Tags', '#lead-tags-input', tags.length ? tags.join(', ') : '-'],
+      ['Observação', '#lead-note', r.observacao || '-'],
+      ['Pontos de contato', 'lista do card', touch.pairs.length ? touch.pairs.map(p => p.date+' ('+TOUCHPOINT_CHANNELS[p.channel]+')').join(', ') : '-']
+    ];
+    const rowsHtml = fields.map(([label, id, val]) =>
+      '<div class="import-preview-field"><span class="import-preview-field-label">'+escapeHtml(label)+' <code>'+escapeHtml(id)+'</code></span><span class="import-preview-field-value">'+escapeHtml(val)+'</span></div>'
+    ).join('');
+    const allErrors = reqErrors.concat(resolved.errors, touch.errors);
+    if(r.situacaoRaw.trim() && !situacaoInfo.valid) allErrors.push('Situação "'+r.situacaoRaw+'" não reconhecida, usando Aberto.');
+    const errHtml = allErrors.length ? '<div class="import-preview-row-errors">'+allErrors.map(e => '⚠ '+escapeHtml(e)).join('<br>')+'</div>' : '';
+    const statusLabel = reqErrors.length
+      ? ' · <span style="color:#e2938a;">será ignorada</span>'
+      : (existing ? ' · <span style="color:#9a9da6;">lead existente, será atualizado</span>' : ' · <span style="color:#d9a94d;">novo lead</span>');
+    return '<div class="import-preview-card"><div class="import-preview-card-title">Linha '+r.line+statusLabel+'</div>' + rowsHtml + errHtml + '</div>';
   }).join('');
-  const moreCount = _importRows.length - 12;
+
+  const moreCount = _importRows.length - 5;
   document.getElementById('import-preview-area').innerHTML =
-    '<div class="import-summary">' + _importRows.length + ' lead(s) encontrado(s) na planilha.</div>' +
-    '<div class="import-preview-wrap"><table class="import-preview-table"><thead><tr><th>Nome</th><th>Telefone</th><th>Pipeline</th><th>Etapa</th><th>Tags</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
-    (moreCount > 0 ? '<div class="hint-block">e mais ' + moreCount + ' lead(s), que também vão ser importados.</div>' : '') +
-    '<div class="hint-block">Em itálico: a pipeline ou etapa escrita na planilha não foi encontrada no CRM, então esse lead vai entrar no valor mostrado (o padrão da pipeline selecionada agora).</div>';
+    '<div class="import-summary">' + _importRows.length + ' linha(s) encontrada(s).</div>' +
+    '<div class="import-preview-list">' + cardsHtml + '</div>' +
+    (moreCount > 0 ? '<div class="hint-block">e mais ' + moreCount + ' linha(s), que também vão ser processadas ao confirmar.</div>' : '');
   document.getElementById('confirm-import-btn').disabled = false;
 }
 
 function resetImportModal(){
   _importMode = 'file';
   _importRows = [];
+  _importShowingReport = false;
   document.getElementById('import-file-input').value = '';
   document.getElementById('import-filename-wrap').innerHTML = '';
   document.getElementById('import-preview-area').innerHTML = '';
   document.getElementById('import-error').style.display = 'none';
   document.getElementById('import-text').value = '';
+  document.getElementById('import-overwrite-stage').checked = false;
   document.getElementById('import-file-area').style.display = 'block';
   document.getElementById('import-text-area').style.display = 'none';
+  document.getElementById('import-form-state').style.display = 'block';
+  document.getElementById('import-report-state').style.display = 'none';
+  document.getElementById('import-report-state').innerHTML = '';
+  document.getElementById('cancel-import-btn').style.display = '';
+  document.getElementById('confirm-import-btn').textContent = 'Importar';
   document.getElementById('confirm-import-btn').disabled = true;
 }
 
@@ -4904,65 +5204,170 @@ function switchImportMode(mode){
   _importMode = mode;
   document.getElementById('import-file-area').style.display = mode === 'file' ? 'block' : 'none';
   document.getElementById('import-text-area').style.display = mode === 'text' ? 'block' : 'none';
-  document.getElementById('confirm-import-btn').disabled = mode === 'file' ? !_importRows.length : false;
+  document.getElementById('confirm-import-btn').disabled = !_importRows.length;
 }
 
-async function runFileImport(){
+// upsert de verdade: telefone normalizado e a chave. Lead existente e
+// atualizado (celula vazia nunca apaga valor que ja existe; tags somam,
+// nunca substituem; etapa so regride nunca, e so avanca se a caixa
+// "sobrescrever etapa" estiver marcada). Lead novo entra com os defaults
+// das regras (situacao vazia = aberto, criado em vazio/invalido = hoje).
+async function runImport(){
+  const existingByPhone = buildExistingPhoneMap();
   const fallbackPipeline = pipelineById(currentPipelineId);
+  const overwriteStage = document.getElementById('import-overwrite-stage').checked;
   const before = _snapshotForUndo();
-  let addedCount = 0;
+
+  let created = 0, updated = 0, ignoredRows = 0, touchCreated = 0, touchIgnored = 0;
+  const errorLines = [];
+
   _importRows.forEach(r => {
-    const nameParts = r.nome.split(' ').filter(Boolean);
-    const firstName = nameParts[0] || r.nome;
-    const lastName = nameParts.slice(1).join(' ');
-    const targetPipeline = findPipelineByName(r.pipelineRaw) || fallbackPipeline;
-    if(!targetPipeline) return;
-    const targetStage = findStageByName(targetPipeline, r.etapaRaw) || targetPipeline.stages[0];
-    if(!targetStage) return;
+    const reqErrors = requiredFieldErrors(r);
+    if(reqErrors.length){
+      ignoredRows++;
+      reqErrors.forEach(e => errorLines.push('Linha '+r.line+': '+e));
+      return;
+    }
+
+    const phoneKey = normalizePhoneKey(r.telefone);
+    const existing = existingByPhone.get(phoneKey);
     const tags = dedupeTags(parseTagsCell(r.tagsRaw));
-    const contact = { id: uid('c'), firstName, lastName, office: '', phone: r.telefone, instagram: '', email: '', address: '', tags, note: '', waNumber: waNumberFromPhone(r.telefone), createdAt: new Date().toISOString() };
-    contacts.push(contact);
-    opportunities.push({ id: uid('o'), contactId: contact.id, pipelineId: targetPipeline.id, stageId: targetStage.id, outcome: 'aberto', createdAt: new Date().toISOString() });
-    addedCount++;
+    const situacaoInfo = parseOutcome(r.situacaoRaw);
+    if(r.situacaoRaw.trim() && !situacaoInfo.valid){
+      errorLines.push('Linha '+r.line+': situação "'+r.situacaoRaw+'" não reconhecida, usando Aberto.');
+    }
+
+    let contact, isNew;
+    if(existing){
+      contact = existing; isNew = false;
+      if(r.nome.trim()) contact.firstName = r.nome.trim();
+      if(r.sobrenome.trim()) contact.lastName = r.sobrenome.trim();
+      if(r.empresa.trim()) contact.office = r.empresa.trim();
+      if(r.email.trim()) contact.email = r.email.trim();
+      if(r.instagram.trim()) contact.instagram = r.instagram.trim();
+      if(r.endereco.trim()) contact.address = r.endereco.trim();
+      if(r.observacao.trim()) contact.note = r.observacao.trim();
+      if(tags.length) contact.tags = mergeTags(contact.tags, tags);
+      if(r.criadoemRaw.trim()){
+        const parsed = parseImportDate(r.criadoemRaw);
+        if(parsed) contact.createdAt = new Date(parsed+'T12:00:00').toISOString();
+        else errorLines.push('Linha '+r.line+': data em "Criado em" inválida ("'+r.criadoemRaw+'"), mantendo a data atual do lead.');
+      }
+      updated++;
+    } else {
+      isNew = true;
+      const parsedCreatedAt = r.criadoemRaw.trim() ? parseImportDate(r.criadoemRaw) : null;
+      if(r.criadoemRaw.trim() && !parsedCreatedAt){
+        errorLines.push('Linha '+r.line+': data em "Criado em" inválida ("'+r.criadoemRaw+'"), usando hoje.');
+      }
+      contact = {
+        id: uid('c'), firstName: r.nome.trim(), lastName: r.sobrenome.trim(), office: r.empresa.trim(),
+        phone: r.telefone, instagram: r.instagram.trim(), email: r.email.trim(), address: r.endereco.trim(),
+        tags, note: r.observacao.trim(), waNumber: waNumberFromPhone(r.telefone),
+        createdAt: new Date((parsedCreatedAt || todayDateStr())+'T12:00:00').toISOString()
+      };
+      contacts.push(contact);
+      existingByPhone.set(phoneKey, contact);
+      created++;
+    }
+
+    const pipelineRawGiven = !!r.pipelineRaw.trim();
+    const etapaRawGiven = !!r.etapaRaw.trim();
+
+    if(isNew){
+      const resolved = resolvePipelineStage(r.pipelineRaw, r.etapaRaw, fallbackPipeline);
+      resolved.errors.forEach(e => errorLines.push('Linha '+r.line+': '+e));
+      if(resolved.pipeline && resolved.stage){
+        const now = new Date().toISOString();
+        opportunities.push({ id: uid('o'), contactId: contact.id, pipelineId: resolved.pipeline.id, stageId: resolved.stage.id, outcome: situacaoInfo.value, createdAt: now, stageChangedAt: now });
+      }
+    } else if(pipelineRawGiven || etapaRawGiven){
+      // atualizacao com pipeline/etapa na planilha: resolve sem fallback pra
+      // pipeline atual (so faz sentido resolver pelo que a propria linha trouxe).
+      const resolved = resolvePipelineStage(r.pipelineRaw, r.etapaRaw, null);
+      resolved.errors.forEach(e => errorLines.push('Linha '+r.line+': '+e));
+      if(resolved.pipeline){
+        let opp = opportunities.find(o => o.contactId === contact.id && o.pipelineId === resolved.pipeline.id);
+        if(!opp){
+          // lead existente mas ainda nao estava nesse pipeline: entra,
+          // nao ha "regressao" possivel aqui.
+          const now = new Date().toISOString();
+          opp = { id: uid('o'), contactId: contact.id, pipelineId: resolved.pipeline.id, stageId: (resolved.stage || resolved.pipeline.stages[0]).id, outcome: situacaoInfo.value, createdAt: now, stageChangedAt: now };
+          opportunities.push(opp);
+        } else {
+          if(r.situacaoRaw.trim()) opp.outcome = situacaoInfo.value;
+          if(resolved.stage){
+            const curIdx = resolved.pipeline.stages.findIndex(s => s.id === opp.stageId);
+            const newIdx = resolved.pipeline.stages.findIndex(s => s.id === resolved.stage.id);
+            if(!overwriteStage){
+              if(newIdx !== curIdx) errorLines.push('Linha '+r.line+': etapa da planilha ignorada (lead já existente; marque "sobrescrever etapa de leads já existentes" pra permitir).');
+            } else if(newIdx < curIdx){
+              errorLines.push('Linha '+r.line+': etapa da planilha é anterior à etapa atual do lead, etapa não foi alterada.');
+            } else if(newIdx !== curIdx){
+              opp.stageId = resolved.stage.id;
+              opp.stageChangedAt = new Date().toISOString();
+            }
+          }
+        }
+      }
+    } else if(r.situacaoRaw.trim()){
+      // sem coluna de pipeline/etapa: nao mexe no funil, so aplica a situacao
+      // (se vier) na oportunidade que o lead ja tiver.
+      const anyOpp = opportunities.find(o => o.contactId === contact.id);
+      if(anyOpp) anyOpp.outcome = situacaoInfo.value;
+    }
+
+    const touch = parseTouchpointsCell(r.datasContatoRaw);
+    touch.errors.forEach(e => errorLines.push('Linha '+r.line+': '+e));
+    touch.pairs.forEach(p => {
+      if(hasTouchpoint(contact.id, p.date, p.channel)){ touchIgnored++; return; }
+      activities.push({ id: uid('act'), type: 'touchpoint', contactId: contact.id, oppId: null, date: p.date, channel: p.channel, createdAt: new Date(p.date+'T12:00:00').toISOString(), by: currentUser ? currentUser.baseEmail : '', manual: false });
+      touchCreated++;
+    });
   });
+
   await DB.saveContactsAndOpportunities(contacts, opportunities);
-  _trackBulkAction(addedCount, addedCount+' lead(s) importado(s).', before);
+  if(touchCreated > 0) await DB.saveActivities(activities);
+  _trackBulkAction(created + updated, created+' criado(s), '+updated+' atualizado(s) na importação.', before);
+
+  return { created, updated, ignoredRows, touchCreated, touchIgnored, errorLines };
+}
+
+function renderImportReport(result){
+  const stats = [
+    ['Criados', result.created],
+    ['Atualizados', result.updated],
+    ['Linhas ignoradas', result.ignoredRows],
+    ['Pontos de contato criados', result.touchCreated],
+    ['Pontos de contato ignorados (duplicado)', result.touchIgnored]
+  ];
+  const statsHtml = stats.map(([label, n]) => '<div class="import-report-stat"><b>'+n+'</b><span>'+escapeHtml(label)+'</span></div>').join('');
+  const errorsHtml = result.errorLines.length
+    ? '<div class="import-report-errors">' + result.errorLines.map(e => '<div>⚠ '+escapeHtml(e)+'</div>').join('') + '</div>'
+    : '<div class="hint-block">Nenhum erro ou aviso.</div>';
+  document.getElementById('import-report-state').innerHTML =
+    '<div class="import-summary">Importação concluída.</div>' +
+    '<div class="import-report-stats">' + statsHtml + '</div>' +
+    '<div class="field-group-title">Linhas com erro ou aviso</div>' +
+    errorsHtml;
+  document.getElementById('import-form-state').style.display = 'none';
+  document.getElementById('import-report-state').style.display = 'block';
+  document.getElementById('cancel-import-btn').style.display = 'none';
+  document.getElementById('confirm-import-btn').textContent = 'Fechar';
+  document.getElementById('confirm-import-btn').disabled = false;
+  _importShowingReport = true;
 }
 
 async function importLeads(){
-  if(_importMode === 'file'){
-    if(!_importRows.length) return;
+  if(_importShowingReport){
     document.getElementById('import-modal-bg').classList.remove('show');
-    await runFileImport();
     render();
     return;
   }
-
-  // modo antigo: colar texto, um lead por linha, sempre na pipeline atual
-  const text = document.getElementById('import-text').value.trim();
-  document.getElementById('import-modal-bg').classList.remove('show');
-  if(!text) return;
-  const pipeline = pipelineById(currentPipelineId);
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const before = _snapshotForUndo();
-  let addedCount = 0;
-  lines.forEach(line => {
-    const parts = line.split(',').map(p => p.trim());
-    const fullName = parts[0] || ''; if(!fullName) return;
-    const nameParts = fullName.split(' ');
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ');
-    const phone = parts[1] || '';
-    const office = parts[2] || '';
-    const email = parts[3] || '';
-    const contact = { id: uid('c'), firstName, lastName, office, phone, instagram: '', email, address: '', tags: [], note: '', waNumber: waNumberFromPhone(phone), createdAt: new Date().toISOString() };
-    contacts.push(contact);
-    opportunities.push({ id: uid('o'), contactId: contact.id, pipelineId: pipeline.id, stageId: pipeline.stages[0].id, outcome: 'aberto', createdAt: new Date().toISOString() });
-    addedCount++;
-  });
-  await DB.saveContactsAndOpportunities(contacts, opportunities);
-  _trackBulkAction(addedCount, addedCount+' lead(s) importado(s).', before);
-  render();
+  if(_importMode === 'text') parseImportTextArea();
+  if(!_importRows.length) return;
+  const result = await runImport();
+  renderImportReport(result);
 }
 
 // ---- login (tela unica: e-mail e senha visiveis desde o inicio) -------
